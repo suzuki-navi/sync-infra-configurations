@@ -1,5 +1,8 @@
 # sync-infra-configurations
 
+## Installation
+
+    $ pip install git+https://github.com/suzuki-navi/sync-infra-configurations
 
 ## Development
 
