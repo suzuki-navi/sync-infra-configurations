@@ -7,11 +7,11 @@ import sync_infra_configurations.lib as sic_lib
 # GlueCrawlers
 ####################################################################################################
 
-def execute_crawlers(action, src_data, session):
+def execute_crawlers(action, is_new, src_data, session):
     glue_client = session.client("glue")
     return sic_lib.execute_elem_items(action, src_data,
         lambda: list_crawlers(glue_client),
-        lambda action, name, src_data: execute_crawler(action, name, src_data, glue_client))
+        lambda action, is_new, name, src_data: execute_crawler(action, is_new, name, src_data, glue_client))
 
 def list_crawlers(glue_client):
     result = []
@@ -29,37 +29,57 @@ def list_crawlers(glue_client):
 # GlueCrawlers -> <crawler_name>
 ####################################################################################################
 
-def execute_crawler(action, name, src_data, glue_client):
-    return sic_lib.execute_elem_properties(action, src_data,
+def execute_crawler(action, is_new, name, src_data, glue_client):
+    return sic_lib.execute_elem_properties(action, is_new, src_data,
         lambda: describe_crawler(name, glue_client),
-        lambda src_data, is_preview: update_crawler(name, src_data, is_preview, glue_client),
+        lambda src_data, is_new, is_preview: update_crawler(name, src_data, is_new, is_preview, glue_client),
         {},
     )
 
 def describe_crawler(name, glue_client):
     res = glue_client.get_crawler(Name = name)
     info = copy.deepcopy(res["Crawler"])
-    del info["Name"]
-    del info["CrawlElapsedTime"]
-    del info["CreationTime"]
-    del info["LastUpdated"]
-    del info["LastCrawl"]
-    del info["State"]
-    del info["Version"]
+    sic_lib.removeKey(info, "Name")
+    sic_lib.removeKey(info, "CrawlElapsedTime")
+    sic_lib.removeKey(info, "CreationTime")
+    sic_lib.removeKey(info, "LastUpdated")
+    sic_lib.removeKey(info, "LastCrawl")
+    sic_lib.removeKey(info, "State")
+    sic_lib.removeKey(info, "Version")
     return info
 
-def update_crawler(name, src_data, is_preview, glue_client):
-    curr_data = describe_crawler(name, glue_client)
-    if src_data == curr_data:
-        return (src_data, curr_data)
-    cmd = f"glue_client.update_crawler(Name = {name}, ...)"
-    if not is_preview:
-        update_data = copy.deepcopy(src_data)
-        update_data["Name"] = name
-        print(cmd, file = sys.stderr)
-        glue_client.update_crawler(**update_data)
-    res_data = copy.deepcopy(src_data)
-    res_data["#command"] = cmd
-    return (res_data, curr_data)
+def update_crawler(name, src_data, is_new, is_preview, glue_client):
+    if is_new:
+        cmd = f"glue_client.create_crawler(Name = {name}, ...)"
+        if not is_preview:
+            update_data = copy.deepcopy(src_data)
+            update_data["Name"] = name
+            print(cmd, file = sys.stderr)
+            if not sic_main.update_confirmation_flag:
+                raise Exception(f"update_confirmation_flag = False")
+            glue_client.create_crawler(**update_data)
+        res_data = copy.deepcopy(src_data)
+        res_data["#command"] = cmd
+        return (res_data, None)
+
+    elif src_data == None:
+        # 削除
+        raise Exception("TODO")
+
+    else:
+        curr_data = describe_crawler(name, glue_client)
+        if src_data == curr_data:
+            return (src_data, curr_data)
+        cmd = f"glue_client.update_crawler(Name = {name}, ...)"
+        if not is_preview:
+            update_data = copy.deepcopy(src_data)
+            update_data["Name"] = name
+            print(cmd, file = sys.stderr)
+            if not sic_main.update_confirmation_flag:
+                raise Exception(f"update_confirmation_flag = False")
+            glue_client.update_crawler(**update_data)
+        res_data = copy.deepcopy(src_data)
+        res_data["#command"] = cmd
+        return (res_data, curr_data)
 
 ####################################################################################################

@@ -1,4 +1,4 @@
-import copy
+import datetime
 from re import S
 import sys
 import yaml
@@ -6,11 +6,24 @@ import yaml
 import sync_infra_configurations.aws as sic_aws
 import sync_infra_configurations.lib as sic_lib
 
+update_confirmation_flag = False
+
 def main():
-    help_flag, action, repeat_count, option_diff, src_file, dst_file = parse_args()
+    global update_confirmation_flag
+    help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file = parse_args()
+
     data0 = load_yaml(src_file)
+
     if action != "get":
         repeat_count = 1
+    if action == "update":
+        if isinstance(confirm, str):
+            check_confirm(confirm)
+            confirm = True
+        if not confirm:
+            raise Exception(f"update action needs parameter --confirm")
+        update_confirmation_flag = True
+
     data1 = (data0, data0)
     for i in range(repeat_count):
         if isinstance(data1[1], list):
@@ -22,11 +35,12 @@ def main():
         else:
             data2 = do_action(action, data1[1])
         data1 = data2
+
     if action == "preview" or action == "update":
         r1 = data1[1]
         r2 = data1[0]
     else:
-        r1 = data1[0]
+        r1 = data0
         r2 = data1[1]
     if option_diff:
         diff_yaml(r1, r2, dst_file)
@@ -44,6 +58,7 @@ def parse_args():
     argCount = len(sys.argv)
     option_i = False
     option_diff = False
+    confirm = False
     while i < argCount:
         a = sys.argv[i]
         i = i + 1
@@ -60,17 +75,26 @@ def parse_args():
             option_i = True
         elif a == "--diff":
             option_diff = True
+        elif a == "--no-diff":
+            option_diff = False
+        elif a == "--force":
+            confirm = True
+        elif a == "--confirm":
+            if i >= argCount:
+                raise Exception(f"Option parameter not found: {a}")
+            confirm = sys.argv[i]
+            i = i + 1
         elif a.startswith("-"):
             raise Exception(f"Unknown option: {a}")
         elif action == None:
             if a == "get":
                 action = a
-            elif a == "drift":
-                action = a
             elif a == "preview":
                 action = a
+                option_diff = True
             elif a == "update":
                 action = a
+                option_diff = True
             else:
                 raise Exception(f"Unknown action: {a}")
         elif src_file == None:
@@ -79,11 +103,24 @@ def parse_args():
             dst_file = a
         else:
             raise Exception(f"Unknown parameter: {a}")
-    if option_i and src_file != None and (action == "get" or action == "drift"):
+    if option_i and not option_diff and src_file != None and action == "get":
         dst_file = src_file
     if dry_run and action == "update":
         action = "preview"
-    return (help_flag, action, repeat_count, option_diff, src_file, dst_file)
+    if option_diff and dst_file != None:
+        raise Exception(f"Unknown parameter: {dst_file}")
+    return (help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file)
+
+def check_confirm(confirm):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    for i in range(3):
+        time_str = (now + datetime.timedelta(minutes = i - 1)).isoformat()
+        hm = time_str[11:13] + time_str[14:16]
+        if hm == confirm:
+            return True
+    time_str = now.isoformat()
+    hm = time_str[11:13] + time_str[14:16]
+    raise Exception(f"update action needs correct parameter --confirm {hm}")
 
 def load_yaml(src_file):
     #loader = yaml.CLoader

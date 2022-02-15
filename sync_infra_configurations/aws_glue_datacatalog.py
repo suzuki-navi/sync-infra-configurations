@@ -9,13 +9,13 @@ import sync_infra_configurations.lib as sic_lib
 # DataCatalog
 ####################################################################################################
 
-def execute_datacatalog(action, src_data, session):
+def execute_datacatalog(action, is_new, src_data, session):
     glue_client = session.client("glue")
-    return sic_lib.execute_elem_properties(action, src_data,
+    return sic_lib.execute_elem_properties(action, is_new, src_data,
         sic_lib.null_describe_fetcher,
         sic_lib.null_updator,
         {
-            "Databases": lambda action, src_data: execute_databases(action, src_data, glue_client),
+            "Databases": lambda action, is_new, src_data: execute_databases(action, is_new, src_data, glue_client),
         },
     )
 
@@ -23,10 +23,10 @@ def execute_datacatalog(action, src_data, session):
 # DataCatalog -> Databases
 ####################################################################################################
 
-def execute_databases(action, src_data, glue_client):
+def execute_databases(action, is_new, src_data, glue_client):
     return sic_lib.execute_elem_items(action, src_data,
         lambda: list_databases(glue_client),
-        lambda action, name, src_data: execute_database(action, name, src_data, glue_client))
+        lambda action, is_new, name, src_data: execute_database(action, is_new, name, src_data, glue_client))
 
 def list_databases(glue_client):
     result = []
@@ -44,30 +44,45 @@ def list_databases(glue_client):
 # DataCatalog -> Databases -> <database_name>
 ####################################################################################################
 
-def execute_database(action, name, src_data, glue_client):
-    return sic_lib.execute_elem_properties(action, src_data,
+def execute_database(action, is_new, name, src_data, glue_client):
+    return sic_lib.execute_elem_properties(action, is_new, src_data,
         lambda: describe_database(name, glue_client),
-        sic_lib.null_updator,
+        lambda src_data, is_new, is_preview: update_database(name, src_data, is_new, is_preview, glue_client),
         {
-            "Tables": lambda action, src_data: execute_tables(action, name, src_data, glue_client),
+            "Tables": lambda action, is_new, src_data: execute_tables(action, is_new, name, src_data, glue_client),
         },
     )
 
 def describe_database(name, glue_client):
     res = glue_client.get_database(Name = name)
     info = copy.deepcopy(res["Database"])
-    del info["Name"]
-    del info["CreateTime"]
+    sic_lib.removeKey(info, "Name")
+    sic_lib.removeKey(info, "CreateTime")
+    sic_lib.removeKey(info, "CatalogId")
     return info
+
+def update_database(name, src_data, is_new, is_preview, glue_client):
+    if is_new:
+        raise Exception("TODO")
+
+    elif src_data == None:
+        # 削除
+        raise Exception("TODO")
+
+    else:
+        curr_data = describe_database(name, glue_client)
+        if src_data == curr_data:
+            return (src_data, curr_data)
+        raise Exception("TODO")
 
 ####################################################################################################
 # DataCatalog -> Databases -> <database_name> -> Tables
 ####################################################################################################
 
-def execute_tables(action, database_name, src_data, glue_client):
+def execute_tables(action, is_new, database_name, src_data, glue_client):
     return sic_lib.execute_elem_items(action, src_data,
         lambda: list_tables(database_name, glue_client),
-        lambda action, name, src_data: execute_table(action, database_name, name, src_data, glue_client))
+        lambda action, is_new, name, src_data: execute_table(action, is_new, database_name, name, src_data, glue_client))
 
 def list_tables(database_name, glue_client):
     result = []
@@ -85,36 +100,59 @@ def list_tables(database_name, glue_client):
 # DataCatalog -> Databases -> <database_name> -> Tables -> <table_name>
 ####################################################################################################
 
-def execute_table(action, database_name, table_name, src_data, glue_client):
-    return sic_lib.execute_elem_properties(action, src_data,
+def execute_table(action, is_new, database_name, table_name, src_data, glue_client):
+    return sic_lib.execute_elem_properties(action, is_new, src_data,
         lambda: describe_table(database_name, table_name, glue_client),
-        lambda src_data, is_preview: update_table(database_name, table_name, src_data, is_preview, glue_client),
+        lambda src_data, is_new, is_preview: update_table(database_name, table_name, src_data, is_new, is_preview, glue_client),
         {},
     )
 
 def describe_table(database_name, table_name, glue_client):
     res = glue_client.get_table(DatabaseName = database_name, Name = table_name)
     info = copy.deepcopy(res["Table"])
-    del info["DatabaseName"]
-    del info["Name"]
-    del info["CreateTime"]
-    del info["UpdateTime"]
-    del info["CreatedBy"]
-    del info["IsRegisteredWithLakeFormation"]
+    sic_lib.removeKey(info, "DatabaseName")
+    sic_lib.removeKey(info, "Name")
+    sic_lib.removeKey(info, "CreateTime")
+    sic_lib.removeKey(info, "UpdateTime")
+    sic_lib.removeKey(info, "LastAccessTime")
+    sic_lib.removeKey(info, "LastAnalyzedTime")
+    sic_lib.removeKey(info, "CreatedBy")
+    sic_lib.removeKey(info, "IsRegisteredWithLakeFormation")
+    sic_lib.removeKey(info, "CatalogId")
     return info
 
-def update_table(database_name, table_name, src_data, is_preview, glue_client):
-    curr_data = describe_table(database_name, table_name, glue_client)
-    if src_data == curr_data:
-        return (src_data, curr_data)
-    cmd = f"glue_client.update_table(DatabaseName = {database_name}, Name = {table_name}, ...)"
-    if not is_preview:
-        update_data = copy.deepcopy(src_data)
-        update_data["Name"] = table_name
-        print(cmd, file = sys.stderr)
-        glue_client.update_table(DatabaseName = database_name, TableInput = update_data)
-    res_data = copy.deepcopy(src_data)
-    res_data["#command"] = cmd
-    return (res_data, curr_data)
+def update_table(database_name, table_name, src_data, is_new, is_preview, glue_client):
+    if is_new:
+        cmd = f"glue_client.create_table(DatabaseName = {database_name}, Name = {table_name}, ...)"
+        if not is_preview:
+            update_data = copy.deepcopy(src_data)
+            update_data["Name"] = table_name
+            print(cmd, file = sys.stderr)
+            if not sic_main.update_confirmation_flag:
+                raise Exception(f"update_confirmation_flag = False")
+            glue_client.create_table(DatabaseName = database_name, TableInput = update_data)
+        res_data = copy.deepcopy(src_data)
+        res_data["#command"] = cmd
+        return (res_data, None)
+
+    elif src_data == None:
+        # 削除
+        raise Exception("TODO")
+
+    else:
+        curr_data = describe_table(database_name, table_name, glue_client)
+        if src_data == curr_data:
+            return (src_data, curr_data)
+        cmd = f"glue_client.update_table(DatabaseName = {database_name}, Name = {table_name}, ...)"
+        if not is_preview:
+            update_data = copy.deepcopy(src_data)
+            update_data["Name"] = table_name
+            print(cmd, file = sys.stderr)
+            if not sic_main.update_confirmation_flag:
+                raise Exception(f"update_confirmation_flag = False")
+            glue_client.update_table(DatabaseName = database_name, TableInput = update_data)
+        res_data = copy.deepcopy(src_data)
+        res_data["#command"] = cmd
+        return (res_data, curr_data)
 
 ####################################################################################################
