@@ -1,5 +1,6 @@
 import copy
 import re
+import sys
 
 import boto3
 
@@ -61,9 +62,9 @@ def put_s3_object(s3_path: str, body: str, is_preview: bool, session):
         return None
     s3_bucket = m.group(1)
     s3_key = m.group(2)
+    print(f"s3_client.put_object(Bucket = {s3_bucket}, Key = {s3_key}, ...)", file = sys.stderr)
     if not is_preview:
-        if not sic_main.update_confirmation_flag:
-            raise Exception(f"update_confirmation_flag = False")
+        if not sic_main.put_confirmation_flag:
+            raise Exception(f"put_confirmation_flag = False")
         res = s3_client.put_object(Bucket = s3_bucket, Key = s3_key, Body = body.encode('utf-8'))
-    return f"s3_client.put_object(Bucket = {s3_bucket}, Key = {s3_key}, ...)"
 

@@ -6,23 +6,37 @@ import yaml
 import sync_infra_configurations.aws as sic_aws
 import sync_infra_configurations.lib as sic_lib
 
-update_confirmation_flag = False
+put_confirmation_flag = False
 
 def main():
-    global update_confirmation_flag
-    help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file = parse_args()
+    global put_confirmation_flag
+    help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query = parse_args()
 
-    data0 = load_yaml(src_file)
+    if src_file == None and resource_query != None:
+        query0 = {}
+        query = query0
+        if resource_query != "":
+            for elem in resource_query.split("."):
+                query1 = {}
+                query[elem] = query1
+                query = query1
+        data0 = [{
+            "type": resource_type,
+            "profile": resource_profile,
+            "resources": query0,
+        }]
+    else:
+        data0 = load_yaml(src_file)
 
     if action != "get":
         repeat_count = 1
-    if action == "update":
+    if action == "put":
         if isinstance(confirm, str):
             check_confirm(confirm)
             confirm = True
         if not confirm:
-            raise Exception(f"update action needs parameter --confirm")
-        update_confirmation_flag = True
+            raise Exception(f"put action needs parameter --confirm")
+        put_confirmation_flag = True
 
     data1 = (data0, data0)
     for i in range(repeat_count):
@@ -36,7 +50,7 @@ def main():
             data2 = do_action(action, data1[1])
         data1 = data2
 
-    if action == "preview" or action == "update":
+    if action == "preview" or action == "put":
         r1 = data1[1]
         r2 = data1[0]
     else:
@@ -59,6 +73,9 @@ def parse_args():
     option_i = False
     option_diff = False
     confirm = False
+    resource_type = None
+    resource_profile = None
+    resource_query = None
     while i < argCount:
         a = sys.argv[i]
         i = i + 1
@@ -84,6 +101,21 @@ def parse_args():
                 raise Exception(f"Option parameter not found: {a}")
             confirm = sys.argv[i]
             i = i + 1
+        elif a == "--type":
+            if i >= argCount:
+                raise Exception(f"Option parameter not found: {a}")
+            resource_type = sys.argv[i]
+            i = i + 1
+        elif a == "--profile":
+            if i >= argCount:
+                raise Exception(f"Option parameter not found: {a}")
+            resource_profile = sys.argv[i]
+            i = i + 1
+        elif a == "--query":
+            if i >= argCount:
+                raise Exception(f"Option parameter not found: {a}")
+            resource_query = sys.argv[i]
+            i = i + 1
         elif a.startswith("-"):
             raise Exception(f"Unknown option: {a}")
         elif action == None:
@@ -92,7 +124,7 @@ def parse_args():
             elif a == "preview":
                 action = a
                 option_diff = True
-            elif a == "update":
+            elif a == "put":
                 action = a
                 option_diff = True
             else:
@@ -105,11 +137,11 @@ def parse_args():
             raise Exception(f"Unknown parameter: {a}")
     if option_i and not option_diff and src_file != None and action == "get":
         dst_file = src_file
-    if dry_run and action == "update":
+    if dry_run and action == "put":
         action = "preview"
     if option_diff and dst_file != None:
         raise Exception(f"Unknown parameter: {dst_file}")
-    return (help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file)
+    return (help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query)
 
 def check_confirm(confirm):
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -120,7 +152,7 @@ def check_confirm(confirm):
             return True
     time_str = now.isoformat()
     hm = time_str[11:13] + time_str[14:16]
-    raise Exception(f"update action needs correct parameter --confirm {hm}")
+    raise Exception(f"put action needs correct parameter --confirm {hm}")
 
 def load_yaml(src_file):
     #loader = yaml.CLoader

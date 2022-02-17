@@ -58,9 +58,16 @@ def describe_job(name, session, glue_client):
     sic_lib.removeKey(info, "CreatedOn")
     sic_lib.removeKey(info, "LastModifiedOn")
     script_s3_path = info["Command"]["ScriptLocation"]
-    script_source = sic_aws.fetch_s3_object(script_s3_path, session)
+    script_source = fetch_script_source(script_s3_path, session)
     info["ScriptSource"] = script_source
     return info
+
+def fetch_script_source(script_s3_path, session):
+    script_source = sic_aws.fetch_s3_object(script_s3_path, session)
+    lines = []
+    for line in script_source.split("\n"):
+        lines.append(line.rstrip(" \t\r"))
+    return "\n".join(lines)
 
 def update_job(name, src_data, is_new, is_preview, session, glue_client):
     if is_new:
@@ -75,7 +82,6 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
         if src_data == curr_data:
             return (src_data, curr_data)
         res_data = copy.deepcopy(src_data)
-        res_data["#command"] = []
 
         src_data2 = copy.deepcopy(src_data)
         curr_data2 = copy.deepcopy(curr_data)
@@ -83,19 +89,22 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
         del curr_data2["ScriptSource"]
         if src_data2 != curr_data2:
             cmd = f"glue_client.update_job(JobName = {name} ...)"
+            print(cmd, file = sys.stderr)
             if not is_preview:
+                if not sic_main.put_confirmation_flag:
+                    raise Exception(f"put_confirmation_flag = False")
                 update_data = copy.deepcopy(src_data2)
-                print(cmd, file = sys.stderr)
-                if not sic_main.update_confirmation_flag:
-                    raise Exception(f"update_confirmation_flag = False")
                 glue_client.update_job(JobName = name, JobUpdate = update_data)
-            res_data["#command"].append(cmd)
+            #res_data["#command"].append(cmd)
 
         if src_data["ScriptSource"] != curr_data["ScriptSource"]:
             script_s3_path = src_data["Command"]["ScriptLocation"]
-            cmd = sic_aws.put_s3_object(script_s3_path, src_data["ScriptSource"], is_preview, session)
-            res_data["#command"].append(cmd)
+            put_script_source(src_data["ScriptSource"], script_s3_path, is_preview, session)
+            #res_data["#command"].append(cmd)
 
         return (res_data, curr_data)
+
+def put_script_source(script_source, script_s3_path, is_preview, session):
+    sic_aws.put_s3_object(script_s3_path, script_source, is_preview, session)
 
 ####################################################################################################

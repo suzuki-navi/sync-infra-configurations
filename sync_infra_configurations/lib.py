@@ -25,7 +25,7 @@ def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator,
                     res_data1[name], res_data2[name] = executor_map[name](action, False, src_data[name])
                 #else:
                 #    res_data2[name] = {}
-    elif action == "preview" or action == "update":
+    elif action == "preview" or action == "put":
         if src_data == None:
             # 削除
             for name in executor_map:
@@ -53,26 +53,42 @@ def execute_elem_items(action, src_data, list_fetcher, executor):
     res_data2 = copy.deepcopy(src_data)
     items = list_fetcher()
     if action == "get":
-        if src_data == None or len(src_data) == 0:
+        if src_data == None:
+            pass
+        elif isinstance(src_data, dict) and len(src_data) == 0:
             res_data2 = {}
             for name in items:
                 res_data2[name] = {}
-        else:
+        elif isinstance(src_data, list) and len(src_data) == 0:
+            res_data2 = []
+            for name in items:
+                res_data2.append(name)
+        elif isinstance(src_data, dict):
             for name in src_data:
                 if name in items:
                     res_data1[name], res_data2[name] = executor(action, False, name, src_data[name])
                 else:
                     del res_data2[name]
-    elif action == "preview" or action == "update":
+        elif isinstance(src_data, list):
+            res_data2 = []
+            for name in src_data:
+                if name in items:
+                    res_data2.append(name)
+            for name in items:
+                if not name in src_data:
+                    res_data2.append(name)
+    elif action == "preview" or action == "put":
         if src_data == None:
             pass
-        else:
+        elif isinstance(src_data, dict):
             res_data1 = {}
             res_data2 = {}
             # 作成または更新または削除
             for name in src_data:
                 is_new = not (name in items)
                 res_data1[name], res_data2[name] = executor(action, is_new, name, src_data[name])
+        elif isinstance(src_data, list):
+            pass
     return (res_data1, res_data2)
 
 def null_describe_fetcher():

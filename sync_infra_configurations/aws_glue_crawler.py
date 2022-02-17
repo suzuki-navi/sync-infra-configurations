@@ -1,6 +1,7 @@
 import copy
 import sys
 
+import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib
 
 ####################################################################################################
@@ -51,15 +52,14 @@ def describe_crawler(name, glue_client):
 def update_crawler(name, src_data, is_new, is_preview, glue_client):
     if is_new:
         cmd = f"glue_client.create_crawler(Name = {name}, ...)"
+        print(cmd, file = sys.stderr)
         if not is_preview:
+            if not sic_main.put_confirmation_flag:
+                raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name
-            print(cmd, file = sys.stderr)
-            if not sic_main.update_confirmation_flag:
-                raise Exception(f"update_confirmation_flag = False")
             glue_client.create_crawler(**update_data)
         res_data = copy.deepcopy(src_data)
-        res_data["#command"] = cmd
         return (res_data, None)
 
     elif src_data == None:
@@ -71,15 +71,14 @@ def update_crawler(name, src_data, is_new, is_preview, glue_client):
         if src_data == curr_data:
             return (src_data, curr_data)
         cmd = f"glue_client.update_crawler(Name = {name}, ...)"
+        print(cmd, file = sys.stderr)
         if not is_preview:
+            if not sic_main.put_confirmation_flag:
+                raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name
-            print(cmd, file = sys.stderr)
-            if not sic_main.update_confirmation_flag:
-                raise Exception(f"update_confirmation_flag = False")
             glue_client.update_crawler(**update_data)
         res_data = copy.deepcopy(src_data)
-        res_data["#command"] = cmd
         return (res_data, curr_data)
 
 ####################################################################################################
