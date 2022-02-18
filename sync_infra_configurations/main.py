@@ -187,7 +187,7 @@ def save_yaml(data, dst_file):
 def diff_yaml(src_data, dst_data, dst_file):
     src_yaml_str = yaml.dump(src_data, sort_keys = False, allow_unicode = True, width = 120)
     dst_yaml_str = yaml.dump(dst_data, sort_keys = False, allow_unicode = True, width = 120)
-    diff_str = sic_lib.exec_diff(src_yaml_str, dst_yaml_str, dst_file)
+    sic_lib.exec_diff(src_yaml_str, dst_yaml_str, dst_file)
 
 def do_action(action, src_data):
     if src_data["type"] == "aws":

@@ -3,6 +3,7 @@ import sys
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib
+import sync_infra_configurations.common_action as common_action
 import sync_infra_configurations.aws as sic_aws
 
 ####################################################################################################
@@ -11,9 +12,9 @@ import sync_infra_configurations.aws as sic_aws
 
 def execute_gluejob(action, is_new, src_data, session):
     glue_client = session.client("glue")
-    return sic_lib.execute_elem_properties(action, is_new, src_data,
-        sic_lib.null_describe_fetcher,
-        sic_lib.null_updator,
+    return common_action.execute_elem_properties(action, is_new, src_data,
+        common_action.null_describe_fetcher,
+        common_action.null_updator,
         {
             "Jobs": lambda action, is_new, src_data: execute_jobs(action, is_new, src_data, session, glue_client),
         },
@@ -24,7 +25,7 @@ def execute_gluejob(action, is_new, src_data, session):
 ####################################################################################################
 
 def execute_jobs(action, is_new, src_data, session, glue_client):
-    return sic_lib.execute_elem_items(action, src_data,
+    return common_action.execute_elem_items(action, src_data,
         lambda: list_jobs(glue_client),
         lambda action, is_new, name, src_data: execute_job(action, is_new, name, src_data, session, glue_client))
 
@@ -45,7 +46,7 @@ def list_jobs(glue_client):
 ####################################################################################################
 
 def execute_job(action, is_new, name, src_data, session, glue_client):
-    return sic_lib.execute_elem_properties(action, is_new, src_data,
+    return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_job(name, session, glue_client),
         lambda src_data, is_new, is_preview: update_job(name, src_data, is_new, is_preview, session, glue_client),
         {},
@@ -78,7 +79,7 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
         cmd = f"glue_client.create_job(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag:
+            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = modify_data_for_put(src_data)
             update_data["Name"] = name
@@ -109,7 +110,7 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
             cmd = f"glue_client.update_job(JobName = {name} ...)"
             print(cmd, file = sys.stderr)
             if not is_preview:
-                if not sic_main.put_confirmation_flag:
+                if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                     raise Exception(f"put_confirmation_flag = False")
                 update_data = modify_data_for_put(src_data2)
                 glue_client.update_job(JobName = name, JobUpdate = update_data)

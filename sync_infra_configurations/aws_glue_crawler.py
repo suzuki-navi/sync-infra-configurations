@@ -3,6 +3,7 @@ import sys
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib
+import sync_infra_configurations.common_action as common_action
 
 ####################################################################################################
 # GlueCrawlers
@@ -10,7 +11,7 @@ import sync_infra_configurations.lib as sic_lib
 
 def execute_crawlers(action, is_new, src_data, session):
     glue_client = session.client("glue")
-    return sic_lib.execute_elem_items(action, src_data,
+    return common_action.execute_elem_items(action, src_data,
         lambda: list_crawlers(glue_client),
         lambda action, is_new, name, src_data: execute_crawler(action, is_new, name, src_data, glue_client))
 
@@ -31,7 +32,7 @@ def list_crawlers(glue_client):
 ####################################################################################################
 
 def execute_crawler(action, is_new, name, src_data, glue_client):
-    return sic_lib.execute_elem_properties(action, is_new, src_data,
+    return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_crawler(name, glue_client),
         lambda src_data, is_new, is_preview: update_crawler(name, src_data, is_new, is_preview, glue_client),
         {},
@@ -54,7 +55,7 @@ def update_crawler(name, src_data, is_new, is_preview, glue_client):
         cmd = f"glue_client.create_crawler(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag:
+            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name
@@ -73,7 +74,7 @@ def update_crawler(name, src_data, is_new, is_preview, glue_client):
         cmd = f"glue_client.update_crawler(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag:
+            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name

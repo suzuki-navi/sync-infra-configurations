@@ -5,6 +5,7 @@ import boto3
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib
+import sync_infra_configurations.common_action as common_action
 
 ####################################################################################################
 # DataCatalog
@@ -12,9 +13,9 @@ import sync_infra_configurations.lib as sic_lib
 
 def execute_datacatalog(action, is_new, src_data, session):
     glue_client = session.client("glue")
-    return sic_lib.execute_elem_properties(action, is_new, src_data,
-        sic_lib.null_describe_fetcher,
-        sic_lib.null_updator,
+    return common_action.execute_elem_properties(action, is_new, src_data,
+        common_action.null_describe_fetcher,
+        common_action.null_updator,
         {
             "Databases": lambda action, is_new, src_data: execute_databases(action, is_new, src_data, glue_client),
         },
@@ -25,7 +26,7 @@ def execute_datacatalog(action, is_new, src_data, session):
 ####################################################################################################
 
 def execute_databases(action, is_new, src_data, glue_client):
-    return sic_lib.execute_elem_items(action, src_data,
+    return common_action.execute_elem_items(action, src_data,
         lambda: list_databases(glue_client),
         lambda action, is_new, name, src_data: execute_database(action, is_new, name, src_data, glue_client))
 
@@ -46,7 +47,7 @@ def list_databases(glue_client):
 ####################################################################################################
 
 def execute_database(action, is_new, name, src_data, glue_client):
-    return sic_lib.execute_elem_properties(action, is_new, src_data,
+    return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_database(name, glue_client),
         lambda src_data, is_new, is_preview: update_database(name, src_data, is_new, is_preview, glue_client),
         {
@@ -67,7 +68,7 @@ def update_database(name, src_data, is_new, is_preview, glue_client):
         cmd = f"glue_client.create_database(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag:
+            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name
@@ -86,7 +87,7 @@ def update_database(name, src_data, is_new, is_preview, glue_client):
         cmd = f"glue_client.update_database(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag:
+            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name
@@ -99,7 +100,7 @@ def update_database(name, src_data, is_new, is_preview, glue_client):
 ####################################################################################################
 
 def execute_tables(action, is_new, database_name, src_data, glue_client):
-    return sic_lib.execute_elem_items(action, src_data,
+    return common_action.execute_elem_items(action, src_data,
         lambda: list_tables(database_name, glue_client),
         lambda action, is_new, name, src_data: execute_table(action, is_new, database_name, name, src_data, glue_client))
 
@@ -120,7 +121,7 @@ def list_tables(database_name, glue_client):
 ####################################################################################################
 
 def execute_table(action, is_new, database_name, table_name, src_data, glue_client):
-    return sic_lib.execute_elem_properties(action, is_new, src_data,
+    return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_table(database_name, table_name, glue_client),
         lambda src_data, is_new, is_preview: update_table(database_name, table_name, src_data, is_new, is_preview, glue_client),
         {},
@@ -145,7 +146,7 @@ def update_table(database_name, table_name, src_data, is_new, is_preview, glue_c
         cmd = f"glue_client.create_table(DatabaseName = {database_name}, Name = {table_name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag:
+            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = table_name
@@ -164,7 +165,7 @@ def update_table(database_name, table_name, src_data, is_new, is_preview, glue_c
         cmd = f"glue_client.update_table(DatabaseName = {database_name}, Name = {table_name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag:
+            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = table_name

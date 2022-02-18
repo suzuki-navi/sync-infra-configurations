@@ -7,20 +7,27 @@
     $ sync-infra-configurations get -i SRC_FILE
 
     $ sync-infra-configurations preview SRC_FILE [DST_FILE]
-    $ sync-infra-configurations preview --diff SRC_FILE
+    $ sync-infra-configurations preview --no-diff SRC_FILE
 
     $ sync-infra-configurations put SRC_FILE [DST_FILE]
-    $ sync-infra-configurations put --diff SRC_FILE
+    $ sync-infra-configurations put --no-diff SRC_FILE
 
-getコマンドは SRC_FILE の内容をクラウド側に問い合わせ表示する。 --diff を付けると SRC_FILE とクラウド側の差分をdiff形式で表示する。
--i を付けると、表示内容を SRC_FILE に書き戻す。
+getコマンドはクラウド側の情報を取得してローカルにYAMLで出力する。
 
-previewコマンドは SRC_FILE の内容をクラウド側に問い合わせ、差分のあった個所を反映するAPIの内容を SRC_FILE の中に埋め込んで表示する。
---diff を付けるとクラウド側と反映するAPIの内容を埋め込んだ SRC_FILE の差分をdiff形式で表示する。
+previewコマンドは put --dry-run と同じ。
 
-putコマンドは SRC_FILE の内容をクラウド側に問い合わせ、差分のあった個所をクラウド側に反映し、APIの内容を SRC_FILE の中に埋め込んで表示する。
---diff を付けるとクラウド側と反映するAPIの内容を埋め込んだ SRC_FILE の差分をdiff形式で表示する。
-putコマンドに --dry-run を付けると、previewコマンドと同じになる。
+putコマンドはローカルのYAMLファイルをクラウド側に反映する。
+
+SRC_FILE はローカルのYAMLファイルを指定する。
+getコマンドでは SRC_FILE に書かれているリソースについてクラウド側に問い合わせをする。
+putコマンドでは SRC_FILE に書かれているリソースをクラウド側に反映する。
+
+DST_FILE は出力先となるローカルのファイル名を指定する。
+指定がない場合は標準出力となる。
+
+getコマンドに--diffオプションを付けると、出力形式がdiff形式になる。putコマンドでは標準でdiff形式となり、--no-diffオプションを付けるとYAML形式になる。
+
+getコマンドに-iオプションを付けると、出力先が入力元と同じSRC_FILEになる。
 
 ## Installation
 
