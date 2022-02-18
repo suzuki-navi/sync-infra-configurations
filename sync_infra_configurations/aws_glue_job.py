@@ -67,11 +67,29 @@ def fetch_script_source(script_s3_path, session):
     lines = []
     for line in script_source.split("\n"):
         lines.append(line.rstrip(" \t\r"))
-    return "\n".join(lines)
+    while len(lines) > 0 and lines[0] == "":
+        lines = lines[1:]
+    while len(lines) > 0 and lines[len(lines) - 1] == "":
+        lines = lines[0 : len(lines) - 1]
+    return "\n".join(lines) + "\n"
 
 def update_job(name, src_data, is_new, is_preview, session, glue_client):
     if is_new:
-        raise Exception("TODO")
+        cmd = f"glue_client.create_job(Name = {name}, ...)"
+        print(cmd, file = sys.stderr)
+        if not is_preview:
+            if not sic_main.put_confirmation_flag:
+                raise Exception(f"put_confirmation_flag = False")
+            update_data = modify_data_for_put(src_data)
+            update_data["Name"] = name
+            del update_data["ScriptSource"]
+            glue_client.create_job(**update_data)
+
+            script_s3_path = src_data["Command"]["ScriptLocation"]
+            put_script_source(src_data["ScriptSource"], script_s3_path, is_preview, session)
+
+        res_data = copy.deepcopy(src_data)
+        return (res_data, None)
 
     elif src_data == None:
         # 削除
@@ -93,16 +111,26 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
             if not is_preview:
                 if not sic_main.put_confirmation_flag:
                     raise Exception(f"put_confirmation_flag = False")
-                update_data = copy.deepcopy(src_data2)
+                update_data = modify_data_for_put(src_data2)
                 glue_client.update_job(JobName = name, JobUpdate = update_data)
-            #res_data["#command"].append(cmd)
 
         if src_data["ScriptSource"] != curr_data["ScriptSource"]:
             script_s3_path = src_data["Command"]["ScriptLocation"]
             put_script_source(src_data["ScriptSource"], script_s3_path, is_preview, session)
-            #res_data["#command"].append(cmd)
 
         return (res_data, curr_data)
+
+def modify_data_for_put(update_data):
+    update_data = copy.deepcopy(update_data)
+    if update_data["WorkerType"] == "Standard":
+        # MaxCapacity が必須で AllocatedCapacity の指定は不可
+        sic_lib.removeKey(update_data, "AllocatedCapacity")
+    elif "NumberOfWorkers" in update_data:
+        sic_lib.removeKey(update_data, "AllocatedCapacity")
+        sic_lib.removeKey(update_data, "MaxCapacity")
+    else:
+        sic_lib.removeKey(update_data, "AllocatedCapacity")
+    return update_data
 
 def put_script_source(script_source, script_s3_path, is_preview, session):
     sic_aws.put_s3_object(script_s3_path, script_source, is_preview, session)

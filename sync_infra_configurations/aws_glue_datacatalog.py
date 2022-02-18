@@ -64,7 +64,16 @@ def describe_database(name, glue_client):
 
 def update_database(name, src_data, is_new, is_preview, glue_client):
     if is_new:
-        raise Exception("TODO")
+        cmd = f"glue_client.create_database(Name = {name}, ...)"
+        print(cmd, file = sys.stderr)
+        if not is_preview:
+            if not sic_main.put_confirmation_flag:
+                raise Exception(f"put_confirmation_flag = False")
+            update_data = copy.deepcopy(src_data)
+            update_data["Name"] = name
+            glue_client.create_database(DatabaseInput = update_data)
+        res_data = copy.deepcopy(src_data)
+        return (res_data, None)
 
     elif src_data == None:
         # 削除
@@ -74,7 +83,16 @@ def update_database(name, src_data, is_new, is_preview, glue_client):
         curr_data = describe_database(name, glue_client)
         if src_data == curr_data:
             return (src_data, curr_data)
-        raise Exception("TODO")
+        cmd = f"glue_client.update_database(Name = {name}, ...)"
+        print(cmd, file = sys.stderr)
+        if not is_preview:
+            if not sic_main.put_confirmation_flag:
+                raise Exception(f"put_confirmation_flag = False")
+            update_data = copy.deepcopy(src_data)
+            update_data["Name"] = name
+            glue_client.update_database(Name = name, DatabaseInput = update_data)
+        res_data = copy.deepcopy(src_data)
+        return (res_data, curr_data)
 
 ####################################################################################################
 # DataCatalog -> Databases -> <database_name> -> Tables
