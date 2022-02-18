@@ -55,7 +55,7 @@ def main():
                 r = do_action(action, elem)
                 data2.append(r)
         else:
-            data2 = do_action(action, data1[1])
+            data2 = do_action(action, data1)
         data1 = data2
 
     if action == "preview" or action == "put":
