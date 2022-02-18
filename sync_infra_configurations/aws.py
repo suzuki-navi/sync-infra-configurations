@@ -14,11 +14,10 @@ import sync_infra_configurations.aws_glue_job as sic_aws_glue_job
 
 def do_action(action, src_data):
     session = create_aws_session(src_data)
-    res_data1 = copy.deepcopy(src_data)
-    res_data2 = copy.deepcopy(src_data)
+    res_data = copy.copy(src_data)
     if "resources" in src_data:
-        res_data1["resources"], res_data2["resources"] = execute_elem_resources(action, False, src_data["resources"], session)
-    return (res_data1, res_data2)
+        res_data["resources"] = execute_elem_resources(action, False, src_data["resources"], session)
+    return res_data
 
 def create_aws_session(data):
     if "profile" in data:
@@ -33,14 +32,15 @@ def create_aws_session(data):
     return session
 
 def execute_elem_resources(action, is_new, src_data, session):
+    # is_new は一番上の階層では意味がない
     return common_action.execute_elem_properties(action, False, src_data,
         common_action.null_describe_fetcher,
         common_action.null_updator,
         {
-            "S3Buckets": lambda action, is_new, src_data: sic_aws_s3.execute_buckets(action, is_new, src_data, session),
-            "DataCatalog": lambda action, is_new, src_data: sic_aws_glue_datacatalog.execute_datacatalog(action, is_new, src_data, session),
+            "S3Buckets":    lambda action, is_new, src_data: sic_aws_s3.execute_buckets(action, is_new, src_data, session),
+            "DataCatalog":  lambda action, is_new, src_data: sic_aws_glue_datacatalog.execute_datacatalog(action, is_new, src_data, session),
             "GlueCrawlers": lambda action, is_new, src_data: sic_aws_glue_crawler.execute_crawlers(action, is_new, src_data, session),
-            "GlueJob": lambda action, is_new, src_data: sic_aws_glue_job.execute_gluejob(action, is_new, src_data, session),
+            "GlueJob":      lambda action, is_new, src_data: sic_aws_glue_job.execute_gluejob(action, is_new, src_data, session),
         },
     )
 

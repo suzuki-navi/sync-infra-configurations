@@ -57,7 +57,7 @@ def execute_database(action, is_new, name, src_data, glue_client):
 
 def describe_database(name, glue_client):
     res = glue_client.get_database(Name = name)
-    info = copy.deepcopy(res["Database"])
+    info = copy.copy(res["Database"])
     sic_lib.removeKey(info, "Name")
     sic_lib.removeKey(info, "CreateTime")
     sic_lib.removeKey(info, "CatalogId")
@@ -68,13 +68,12 @@ def update_database(name, src_data, is_new, is_preview, glue_client):
         cmd = f"glue_client.create_database(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
-            update_data = copy.deepcopy(src_data)
+            update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.create_database(DatabaseInput = update_data)
-        res_data = copy.deepcopy(src_data)
-        return (res_data, None)
+        return None
 
     elif src_data == None:
         # 削除
@@ -83,17 +82,16 @@ def update_database(name, src_data, is_new, is_preview, glue_client):
     else:
         curr_data = describe_database(name, glue_client)
         if src_data == curr_data:
-            return (src_data, curr_data)
+            return curr_data
         cmd = f"glue_client.update_database(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
-            update_data = copy.deepcopy(src_data)
+            update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.update_database(Name = name, DatabaseInput = update_data)
-        res_data = copy.deepcopy(src_data)
-        return (res_data, curr_data)
+        return curr_data
 
 ####################################################################################################
 # DataCatalog -> Databases -> <database_name> -> Tables
@@ -129,7 +127,7 @@ def execute_table(action, is_new, database_name, table_name, src_data, glue_clie
 
 def describe_table(database_name, table_name, glue_client):
     res = glue_client.get_table(DatabaseName = database_name, Name = table_name)
-    info = copy.deepcopy(res["Table"])
+    info = copy.copy(res["Table"])
     sic_lib.removeKey(info, "DatabaseName")
     sic_lib.removeKey(info, "Name")
     sic_lib.removeKey(info, "CreateTime")
@@ -146,13 +144,12 @@ def update_table(database_name, table_name, src_data, is_new, is_preview, glue_c
         cmd = f"glue_client.create_table(DatabaseName = {database_name}, Name = {table_name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
-            update_data = copy.deepcopy(src_data)
+            update_data = copy.copy(src_data)
             update_data["Name"] = table_name
             glue_client.create_table(DatabaseName = database_name, TableInput = update_data)
-        res_data = copy.deepcopy(src_data)
-        return (res_data, None)
+        return None
 
     elif src_data == None:
         # 削除
@@ -161,16 +158,15 @@ def update_table(database_name, table_name, src_data, is_new, is_preview, glue_c
     else:
         curr_data = describe_table(database_name, table_name, glue_client)
         if src_data == curr_data:
-            return (src_data, curr_data)
+            return curr_data
         cmd = f"glue_client.update_table(DatabaseName = {database_name}, Name = {table_name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
-            update_data = copy.deepcopy(src_data)
+            update_data = copy.copy(src_data)
             update_data["Name"] = table_name
             glue_client.update_table(DatabaseName = database_name, TableInput = update_data)
-        res_data = copy.deepcopy(src_data)
-        return (res_data, curr_data)
+        return curr_data
 
 ####################################################################################################

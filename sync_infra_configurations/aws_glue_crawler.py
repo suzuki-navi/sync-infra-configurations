@@ -40,7 +40,7 @@ def execute_crawler(action, is_new, name, src_data, glue_client):
 
 def describe_crawler(name, glue_client):
     res = glue_client.get_crawler(Name = name)
-    info = copy.deepcopy(res["Crawler"])
+    info = copy.copy(res["Crawler"])
     sic_lib.removeKey(info, "Name")
     sic_lib.removeKey(info, "CrawlElapsedTime")
     sic_lib.removeKey(info, "CreationTime")
@@ -55,13 +55,12 @@ def update_crawler(name, src_data, is_new, is_preview, glue_client):
         cmd = f"glue_client.create_crawler(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
-            update_data = copy.deepcopy(src_data)
+            update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.create_crawler(**update_data)
-        res_data = copy.deepcopy(src_data)
-        return (res_data, None)
+        return None
 
     elif src_data == None:
         # 削除
@@ -70,16 +69,15 @@ def update_crawler(name, src_data, is_new, is_preview, glue_client):
     else:
         curr_data = describe_crawler(name, glue_client)
         if src_data == curr_data:
-            return (src_data, curr_data)
+            return curr_data
         cmd = f"glue_client.update_crawler(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name
             glue_client.update_crawler(**update_data)
-        res_data = copy.deepcopy(src_data)
-        return (res_data, curr_data)
+        return curr_data
 
 ####################################################################################################

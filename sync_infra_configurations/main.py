@@ -28,34 +28,42 @@ def main():
     else:
         data0 = load_yaml(src_file)
 
-    if action != "get":
+    if action == None:
+        # actionが指定されていない場合はなにもせずにそのままYAML出力
+        repeat_count = 0
+    elif action != "get":
+        # getコマンド以外では --repeat オプションが無意味
         repeat_count = 1
+
     if action == "put":
+        # putコマンドでは --confirm オプションをチェック
         if isinstance(confirm, str):
             check_confirm(confirm)
             confirm = True
         if not confirm:
-            raise Exception(f"put action needs parameter --confirm")
+            raise Exception(f"put action needs option --confirm")
+
+        # バグにより意図せず更新してしまうの防ぐために更新系のAPIコールの直前にこのフラグをチェックしている
+        # このフラグが True でないと更新系のAPIコールをしないようにしている
         put_confirmation_flag = True
 
-    data1 = (data0, data0)
+    data1 = data0
     for i in range(repeat_count):
-        if isinstance(data1[1], list):
-            data2 = ([], [])
-            for elem in data1[1]:
-                r1, r2 = do_action(action, elem)
-                data2[0].append(r1)
-                data2[1].append(r2)
+        if isinstance(data1, list):
+            data2 = []
+            for elem in data1:
+                r = do_action(action, elem)
+                data2.append(r)
         else:
             data2 = do_action(action, data1[1])
         data1 = data2
 
     if action == "preview" or action == "put":
-        r1 = data1[1]
-        r2 = data1[0]
+        r1 = data1 # 更新前のクラウド側
+        r2 = data0 # src
     else:
-        r1 = data0
-        r2 = data1[1]
+        r1 = data0 # src
+        r2 = data1 # クラウド側
     if option_diff:
         diff_yaml(r1, r2, dst_file)
     else:
@@ -71,7 +79,7 @@ def parse_args():
     i = 1
     argCount = len(sys.argv)
     option_i = False
-    option_diff = False
+    option_diff = None
     confirm = False
     resource_type = None
     resource_profile = None
@@ -123,10 +131,12 @@ def parse_args():
                 action = a
             elif a == "preview":
                 action = a
-                option_diff = True
+                if option_diff == None:
+                    option_diff = True
             elif a == "put":
                 action = a
-                option_diff = True
+                if option_diff == None:
+                    option_diff = True
             else:
                 raise Exception(f"Unknown action: {a}")
         elif src_file == None:
@@ -135,7 +145,7 @@ def parse_args():
             dst_file = a
         else:
             raise Exception(f"Unknown parameter: {a}")
-    if option_i and not option_diff and src_file != None and action == "get":
+    if option_i and not option_diff and src_file != None and dst_file == None and action == "get":
         dst_file = src_file
     if dry_run and action == "put":
         action = "preview"

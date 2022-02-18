@@ -54,7 +54,7 @@ def execute_job(action, is_new, name, src_data, session, glue_client):
 
 def describe_job(name, session, glue_client):
     res = glue_client.get_job(JobName = name)
-    info = copy.deepcopy(res["Job"])
+    info = copy.copy(res["Job"])
     sic_lib.removeKey(info, "Name")
     sic_lib.removeKey(info, "CreatedOn")
     sic_lib.removeKey(info, "LastModifiedOn")
@@ -79,7 +79,7 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
         cmd = f"glue_client.create_job(Name = {name}, ...)"
         print(cmd, file = sys.stderr)
         if not is_preview:
-            if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
             update_data = modify_data_for_put(src_data)
             update_data["Name"] = name
@@ -89,8 +89,7 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
             script_s3_path = src_data["Command"]["ScriptLocation"]
             put_script_source(src_data["ScriptSource"], script_s3_path, is_preview, session)
 
-        res_data = copy.deepcopy(src_data)
-        return (res_data, None)
+        return None
 
     elif src_data == None:
         # 削除
@@ -99,18 +98,17 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
     else:
         curr_data = describe_job(name, session, glue_client)
         if src_data == curr_data:
-            return (src_data, curr_data)
-        res_data = copy.deepcopy(src_data)
+            return curr_data
 
-        src_data2 = copy.deepcopy(src_data)
-        curr_data2 = copy.deepcopy(curr_data)
+        src_data2 = copy.copy(src_data)
+        curr_data2 = copy.copy(curr_data)
         del src_data2["ScriptSource"]
         del curr_data2["ScriptSource"]
         if src_data2 != curr_data2:
             cmd = f"glue_client.update_job(JobName = {name} ...)"
             print(cmd, file = sys.stderr)
             if not is_preview:
-                if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
+                if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                     raise Exception(f"put_confirmation_flag = False")
                 update_data = modify_data_for_put(src_data2)
                 glue_client.update_job(JobName = name, JobUpdate = update_data)
@@ -119,10 +117,10 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
             script_s3_path = src_data["Command"]["ScriptLocation"]
             put_script_source(src_data["ScriptSource"], script_s3_path, is_preview, session)
 
-        return (res_data, curr_data)
+        return curr_data
 
 def modify_data_for_put(update_data):
-    update_data = copy.deepcopy(update_data)
+    update_data = copy.copy(update_data)
     if update_data["WorkerType"] == "Standard":
         # MaxCapacity が必須で AllocatedCapacity の指定は不可
         sic_lib.removeKey(update_data, "AllocatedCapacity")
