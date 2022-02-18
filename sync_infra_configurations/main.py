@@ -205,3 +205,9 @@ def do_action(action, src_data):
     else:
         return (src_data, src_data)
 
+update_message = []
+
+# 更新系APIコールの直前で呼ばれる
+def add_update_message(message):
+    print(message, file = sys.stderr)
+    update_message.append(message)

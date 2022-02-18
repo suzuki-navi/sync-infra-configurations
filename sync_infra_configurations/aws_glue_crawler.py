@@ -52,8 +52,7 @@ def describe_crawler(name, glue_client):
 
 def update_crawler(name, src_data, is_new, is_preview, glue_client):
     if is_new:
-        cmd = f"glue_client.create_crawler(Name = {name}, ...)"
-        print(cmd, file = sys.stderr)
+        sic_main.add_update_message(f"glue_client.create_crawler(Name = {name}, ...)")
         if not is_preview:
             if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
@@ -70,8 +69,7 @@ def update_crawler(name, src_data, is_new, is_preview, glue_client):
         curr_data = describe_crawler(name, glue_client)
         if src_data == curr_data:
             return curr_data
-        cmd = f"glue_client.update_crawler(Name = {name}, ...)"
-        print(cmd, file = sys.stderr)
+        sic_main.add_update_message(f"glue_client.update_crawler(Name = {name}, ...)")
         if not is_preview:
             if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")

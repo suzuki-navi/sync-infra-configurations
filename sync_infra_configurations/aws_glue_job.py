@@ -76,8 +76,7 @@ def fetch_script_source(script_s3_path, session):
 
 def update_job(name, src_data, is_new, is_preview, session, glue_client):
     if is_new:
-        cmd = f"glue_client.create_job(Name = {name}, ...)"
-        print(cmd, file = sys.stderr)
+        sic_main.add_update_message(f"glue_client.create_job(Name = {name}, ...)")
         if not is_preview:
             if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                 raise Exception(f"put_confirmation_flag = False")
@@ -105,8 +104,7 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
         del src_data2["ScriptSource"]
         del curr_data2["ScriptSource"]
         if src_data2 != curr_data2:
-            cmd = f"glue_client.update_job(JobName = {name} ...)"
-            print(cmd, file = sys.stderr)
+            sic_main.add_update_message(f"glue_client.update_job(JobName = {name} ...)")
             if not is_preview:
                 if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
                     raise Exception(f"put_confirmation_flag = False")
