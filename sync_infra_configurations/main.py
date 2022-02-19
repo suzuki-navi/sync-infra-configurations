@@ -12,24 +12,36 @@ def main():
     global put_confirmation_flag
     help_flag, action, repeat_count, option_yaml, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query = parse_args()
 
-    if src_file == None and resource_query != None:
-        query0 = {}
-        query = query0
+    resource_queries = []
+    is_completion = False
+    if src_file == None and resource_type != None:
+        if resource_query == None:
+            resource_query = ""
+        query = {}
+        data0 = {
+            "type": resource_type,
+            "profile": resource_profile,
+            "resources": query,
+        }
+        if resource_query.endswith("."):
+            resource_query = resource_query[:len(resource_query) - 1]
+            is_completion = True
         if resource_query != "":
-            for elem in resource_query.split("."):
+            resource_queries = resource_query.split(".")
+            for elem in resource_queries:
                 query1 = {}
                 query[elem] = query1
                 query = query1
-        data0 = [{
-            "type": resource_type,
-            "profile": resource_profile,
-            "resources": query0,
-        }]
     else:
         data0 = load_yaml(src_file)
 
+    if resource_query != None:
+        action = "get"
+        repeat_count = 1
+
     if action == None:
         # actionが指定されていない場合はなにもせずにそのままYAML出力
+        action = "get"
         repeat_count = 0
     elif action != "get":
         # getコマンド以外では --repeat オプションが無意味
@@ -64,10 +76,19 @@ def main():
     else:
         r1 = data0 # src
         r2 = data1 # クラウド側
-    if option_yaml:
-        save_yaml(r2, dst_file)
-    if option_diff:
-        diff_yaml(r1, r2, dst_file)
+    if resource_query != None and not option_yaml and not option_diff:
+        output_simple(data1, resource_queries, is_completion)
+    else:
+        if action == None and option_diff == None:
+            option_yaml = True
+        if action == "get" and option_diff == None:
+            option_yaml = True
+        if action == "preview" and option_yaml == None:
+            option_diff = True
+        if option_yaml:
+            save_yaml(r2, dst_file)
+        if option_diff:
+            diff_yaml(r1, r2, dst_file)
 
 def parse_args():
     help_flag = False
@@ -144,16 +165,10 @@ def parse_args():
             raise Exception(f"Unknown parameter: {a}")
     if dry_run and action == "put":
         action = "preview"
-    if action == None and option_diff == None:
-        option_yaml = True
-    if action == "get" and option_diff == None:
-        option_yaml = True
-    if action == "preview" and option_yaml == None:
-        option_diff = True
     if option_i and not option_diff and src_file != None and dst_file == None and action == "get":
         dst_file = src_file
-    if option_diff and dst_file != None:
-        raise Exception(f"Unknown parameter: {dst_file}")
+    #if option_diff and dst_file != None:
+    #    raise Exception(f"Unknown parameter: {dst_file}")
     return (help_flag, action, repeat_count, option_yaml, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query)
 
 def check_confirm(confirm):
@@ -186,11 +201,38 @@ def represent_str(dumper, s):
 
 yaml.add_representer(str, represent_str)
 
-def save_yaml(data, dst_file):
+def output_simple(data1, resource_queries, is_completion):
+    result = data1["resources"]
+    for elem in resource_queries:
+        result = result[elem]
+    if result == None:
+        pass
+    elif isinstance(result, dict):
+        is_simple = True
+        if not is_completion:
+            for name, value in result.items():
+                if value != {}:
+                    is_simple = False
+        if is_simple:
+            for name, value in result.items():
+                print(name)
+        else:
+            save_yaml(result, None)
+    elif isinstance(result, list):
+        for name in result:
+            print(name)
+    elif isinstance(result, str):
+        if not is_completion:
+            print(result)
+    elif isinstance(result, int):
+        if not is_completion:
+            print(result)
+    else:
+        if not is_completion:
+            save_yaml(result, None)
 
-    dumper = yaml.CDumper
+def save_yaml(data, dst_file):
     yaml_str = yaml.dump(data, sort_keys = False, allow_unicode = True, width = 120, default_flow_style = False)
-    #yaml_str = yaml.safe_dump(data, sort_keys = False, allow_unicode = True, width = 120, default_flow_style = False)
     if dst_file:
         with open(dst_file, "w") as f:
             f.write(yaml_str)
