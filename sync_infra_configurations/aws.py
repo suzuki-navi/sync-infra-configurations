@@ -12,6 +12,18 @@ import sync_infra_configurations.aws_glue_datacatalog as sic_aws_glue_datacatalo
 import sync_infra_configurations.aws_glue_crawler as sic_aws_glue_crawler
 import sync_infra_configurations.aws_glue_job as sic_aws_glue_job
 
+def get_message_prefix(data):
+    if "profile" in data:
+        profile = data["profile"]
+    else:
+        profile = "default"
+    ret = f"aws(proifle={profile}"
+    if "region" in data:
+        region = data["region"]
+        ret = ret + ", region={region}"
+    ret = ret + ")"
+    return ret
+
 def do_action(action, src_data):
     session = create_aws_session(src_data)
     res_data = copy.copy(src_data)
@@ -63,7 +75,7 @@ def put_s3_object(s3_path: str, body: str, is_preview: bool, session):
         return None
     s3_bucket = m.group(1)
     s3_key = m.group(2)
-    print(f"s3_client.put_object(Bucket = {s3_bucket}, Key = {s3_key}, ...)", file = sys.stderr)
+    sic_main.add_update_message(f"s3_client.put_object(Bucket = {s3_bucket}, Key = {s3_key}, ...)")
     if not is_preview:
         if not sic_main.put_confirmation_flag: # 意図せず更新してしまうバグを防ぐために更新処理の直前にフラグをチェック
             raise Exception(f"put_confirmation_flag = False")

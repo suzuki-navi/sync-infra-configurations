@@ -10,7 +10,7 @@ put_confirmation_flag = False
 
 def main():
     global put_confirmation_flag
-    help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query = parse_args()
+    help_flag, action, repeat_count, option_yaml, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query = parse_args()
 
     if src_file == None and resource_query != None:
         query0 = {}
@@ -64,10 +64,10 @@ def main():
     else:
         r1 = data0 # src
         r2 = data1 # クラウド側
+    if option_yaml:
+        save_yaml(r2, dst_file)
     if option_diff:
         diff_yaml(r1, r2, dst_file)
-    else:
-        save_yaml(r2, dst_file)
 
 def parse_args():
     help_flag = False
@@ -80,6 +80,7 @@ def parse_args():
     argCount = len(sys.argv)
     option_i = False
     option_diff = None
+    option_yaml = None
     confirm = False
     resource_type = None
     resource_profile = None
@@ -100,8 +101,8 @@ def parse_args():
             option_i = True
         elif a == "--diff":
             option_diff = True
-        elif a == "--no-diff":
-            option_diff = False
+        elif a == "--yaml":
+            option_yaml = True
         elif a == "--force":
             confirm = True
         elif a == "--confirm":
@@ -131,12 +132,8 @@ def parse_args():
                 action = a
             elif a == "preview":
                 action = a
-                if option_diff == None:
-                    option_diff = True
             elif a == "put":
                 action = a
-                if option_diff == None:
-                    option_diff = True
             else:
                 raise Exception(f"Unknown action: {a}")
         elif src_file == None:
@@ -145,13 +142,19 @@ def parse_args():
             dst_file = a
         else:
             raise Exception(f"Unknown parameter: {a}")
-    if option_i and not option_diff and src_file != None and dst_file == None and action == "get":
-        dst_file = src_file
     if dry_run and action == "put":
         action = "preview"
+    if action == None and option_diff == None:
+        option_yaml = True
+    if action == "get" and option_diff == None:
+        option_yaml = True
+    if action == "preview" and option_yaml == None:
+        option_diff = True
+    if option_i and not option_diff and src_file != None and dst_file == None and action == "get":
+        dst_file = src_file
     if option_diff and dst_file != None:
         raise Exception(f"Unknown parameter: {dst_file}")
-    return (help_flag, action, repeat_count, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query)
+    return (help_flag, action, repeat_count, option_yaml, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query)
 
 def check_confirm(confirm):
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -200,14 +203,18 @@ def diff_yaml(src_data, dst_data, dst_file):
     sic_lib.exec_diff(src_yaml_str, dst_yaml_str, dst_file)
 
 def do_action(action, src_data):
+    global update_message_prefix
     if src_data["type"] == "aws":
+        update_message_prefix = sic_aws.get_message_prefix(src_data)
         return sic_aws.do_action(action, src_data)
     else:
         return (src_data, src_data)
 
+update_message_prefix = ""
 update_message = []
 
 # 更新系APIコールの直前で呼ばれる
 def add_update_message(message):
+    message = f"{update_message_prefix}: {message}"
     print(message, file = sys.stderr)
     update_message.append(message)
