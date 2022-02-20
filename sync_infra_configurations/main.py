@@ -424,10 +424,12 @@ def add_update_message(message):
         message = f"{update_message_prefix}: {message}"
     else:
         message = f"{message}"
-    print(message, file = sys.stderr)
+    #print(message, file = sys.stderr)
+    print(message)
     update_message.append(message)
 
 def add_update_completion_message():
     if len(update_message) > 0:
         message = "complete put action"
-        print(message, file = sys.stderr)
+        #print(message, file = sys.stderr)
+        print(message)
