@@ -84,7 +84,7 @@ def update_job(name, src_data, is_new, session, glue_client):
             glue_client.create_job(**update_data)
 
             script_s3_path = src_data["Command"]["ScriptLocation"]
-            put_script_source(src_data["ScriptSource"], script_s3_path, is_preview, session)
+            put_script_source(src_data["ScriptSource"], script_s3_path, session)
 
         return None
 
