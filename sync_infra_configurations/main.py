@@ -9,167 +9,206 @@ import sync_infra_configurations.lib as sic_lib
 put_confirmation_flag = False
 
 def main():
-    global put_confirmation_flag
-    help_flag, action, repeat_count, option_yaml, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query = parse_args()
-
-    resource_queries = []
-    is_completion = False
-    if src_file == None and resource_type != None:
-        if resource_query == None:
-            resource_query = ""
-        query = {}
-        data0 = {
-            "type": resource_type,
-            "profile": resource_profile,
-            "resources": query,
-        }
-        if resource_query.endswith("."):
-            resource_query = resource_query[:len(resource_query) - 1]
-            is_completion = True
-        if resource_query != "":
-            resource_queries = resource_query.split(".")
-            for elem in resource_queries:
-                query1 = {}
-                query[elem] = query1
-                query = query1
-    else:
-        data0 = load_yaml(src_file)
-
-    if resource_query != None:
-        action = "get"
-        repeat_count = 1
-
-    if action == None:
-        # actionが指定されていない場合はなにもせずにそのままYAML出力
-        action = "get"
-        repeat_count = 0
-    elif action != "get":
-        # getコマンド以外では --repeat オプションが無意味
-        repeat_count = 1
-
-    if action == "put":
-        # putコマンドでは --confirm オプションをチェック
-        if isinstance(confirm, str):
-            check_confirm(confirm)
-            confirm = True
-        if not confirm:
-            raise Exception(f"put action needs option --confirm")
-
-        # バグにより意図せず更新してしまうの防ぐために更新系のAPIコールの直前にこのフラグをチェックしている
-        # このフラグが True でないと更新系のAPIコールをしないようにしている
-        put_confirmation_flag = True
-
-    data1 = data0
-    for i in range(repeat_count):
-        if isinstance(data1, list):
-            data2 = []
-            for elem in data1:
-                r = do_action(action, elem)
-                data2.append(r)
-        else:
-            data2 = do_action(action, data1)
-        data1 = data2
-
-    if action == "preview" or action == "put":
-        r1 = data1 # 更新前のクラウド側
-        r2 = data0 # src
-    else:
-        r1 = data0 # src
-        r2 = data1 # クラウド側
-    if resource_query != None and not option_yaml and not option_diff:
-        output_simple(data1, resource_queries, is_completion)
-    else:
-        if action == None and option_diff == None:
-            option_yaml = True
-        if action == "get" and option_diff == None:
-            option_yaml = True
-        if action == "preview" and option_yaml == None:
-            option_diff = True
-        if option_yaml:
-            save_yaml(r2, dst_file)
-        if option_diff:
-            diff_yaml(r1, r2, dst_file)
+    (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm) = parse_args()
+    (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm) = check_args \
+        (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
+    exec_main \
+        (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
 
 def parse_args():
     help_flag = False
-    dry_run = False
-    action = None
-    repeat_count = 1
+    action = None # get, put, exec
+    output_format = None # y, yaml
+    is_diff = None
+    type = None # aws
+    profile = None
+    path = None
     src_file = None
-    dst_file = None
+    is_inplace = False
+    repeat_count = None
+    is_dryrun = False
+    confirm = None
     i = 1
     argCount = len(sys.argv)
-    option_i = False
-    option_diff = None
-    option_yaml = None
-    confirm = False
-    resource_type = None
-    resource_profile = None
-    resource_query = None
     while i < argCount:
         a = sys.argv[i]
         i = i + 1
         if a == "--help":
             help_flag = True
-        elif a == "--dry-run":
-            dry_run = True
-        elif a == "--repeat":
-            if i >= argCount:
-                raise Exception(f"Option parameter not found: {a}")
-            repeat_count = int(sys.argv[i])
-            i = i + 1
-        elif a == "-i":
-            option_i = True
-        elif a == "--diff":
-            option_diff = True
+        elif a == "-y":
+            output_format = "y"
         elif a == "--yaml":
-            option_yaml = True
-        elif a == "--force":
-            confirm = True
-        elif a == "--confirm":
-            if i >= argCount:
-                raise Exception(f"Option parameter not found: {a}")
-            confirm = sys.argv[i]
-            i = i + 1
-        elif a == "--type":
-            if i >= argCount:
-                raise Exception(f"Option parameter not found: {a}")
-            resource_type = sys.argv[i]
-            i = i + 1
+            output_format = "yaml"
+        elif a == "--diff":
+            is_diff = True
+        elif a == "--no-diff":
+            is_diff = False
         elif a == "--profile":
             if i >= argCount:
                 raise Exception(f"Option parameter not found: {a}")
-            resource_profile = sys.argv[i]
+            profile = sys.argv[i]
             i = i + 1
-        elif a == "--query":
+        elif a == "-p":
             if i >= argCount:
                 raise Exception(f"Option parameter not found: {a}")
-            resource_query = sys.argv[i]
+            path = sys.argv[i]
             i = i + 1
+        elif a == "-s":
+            if i >= argCount:
+                raise Exception(f"Option parameter not found: {a}")
+            src_file = sys.argv[i]
+            i = i + 1
+        #elif a == "-i":
+        #    is_inplace = True
+        #elif a == "--repeat":
+        #    if i >= argCount:
+        #        raise Exception(f"Option parameter not found: {a}")
+        #    repeat_count = int(sys.argv[i])
+        #    i = i + 1
+        #elif a == "--force":
+        #    confirm = True
+        #elif a == "--dry-run":
+        #    is_dryrun = True
+        #elif a == "--confirm":
+        #    if i >= argCount:
+        #        raise Exception(f"Option parameter not found: {a}")
+        #    confirm = sys.argv[i]
+        #    i = i + 1
         elif a.startswith("-"):
             raise Exception(f"Unknown option: {a}")
-        elif action == None:
-            if a == "get":
-                action = a
-            elif a == "preview":
-                action = a
-            elif a == "put":
-                action = a
-            else:
-                raise Exception(f"Unknown action: {a}")
-        elif src_file == None:
-            src_file = a
-        elif dst_file == None:
-            dst_file = a
+        elif action == None and a == "get":
+            action = "get"
+        #elif action == None and a == "put":
+        #    action = "put"
+        #elif action == None and a == "exec":
+        #    action = "exec"
+        elif a == "aws":
+            type = "aws"
         else:
             raise Exception(f"Unknown parameter: {a}")
-    if dry_run and action == "put":
-        action = "preview"
-    if option_i and not option_diff and src_file != None and dst_file == None and action == "get":
-        dst_file = src_file
-    #if option_diff and dst_file != None:
-    #    raise Exception(f"Unknown parameter: {dst_file}")
-    return (help_flag, action, repeat_count, option_yaml, option_diff, confirm, src_file, dst_file, resource_type, resource_profile, resource_query)
+    return (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
+
+def check_args(help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm):
+    if path != None and type == None:
+        raise Exception("-p option needs aws parameter")
+
+    if path != None and path.endswith("."):
+        path = path[0:len(path) - 1]
+        action = "get"
+        output_format = "completion"
+        is_diff = False
+        src_file = None
+        is_inplace = False
+        repeat_count = 1
+
+    if action == None:
+        action = "get"
+        if repeat_count == None:
+            if type == None:
+                repeat_count = 0
+            else:
+                repeat_count = 1
+
+    if action == "get":
+        if type == None and src_file == None and sys.stdin.isatty():
+            raise Exception(f"either aws parameter or -s must be expected")
+
+    if action != "get":
+        raise Exception("TODO")
+
+    #elif action == "get":
+    #    if repeat_count == None:
+    #        repeat_count = 1
+    if repeat_count == None:
+        repeat_count = 1
+    #else:
+    #    repeat_count = 1
+
+    #if is_inplace and src_file == None:
+    #    raise Exception("-i option needs -s option")
+
+    #if is_inplace and action != "get":
+    #    raise Exception("-i option needs get command")
+
+    #if type != None and src_file != None:
+    #    raise Exception(f"only one of {type} and -s can be specified")
+
+    #if action == "get":
+    #    pass
+    #elif action == "put":
+    #    if type != None:
+    #        if output_format == "yaml":
+    #            raise Exception(f"only one of {type} and --yaml when put action")
+    #elif action == "exec":
+    #    raise Exception(f"TODO")
+
+    if type != None:
+        if path == None or path == "":
+            path = []
+        else:
+            path = path.split(".")
+        if output_format == None:
+            output_format = "simple"
+
+    if output_format == None:
+        output_format = "yaml"
+
+    return (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
+
+def exec_main(help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm):
+    global put_confirmation_flag
+
+    if action == "put":
+        if not is_dryrun:
+            # putコマンドでは --confirm オプションをチェック
+            if confirm != True:
+                check_confirm(confirm)
+                confirm = True
+
+            # バグにより意図せず更新してしまうの防ぐために更新系のAPIコールの直前にこのフラグをチェックしている
+            # このフラグが True でないと更新系のAPIコールをしないようにしている
+            put_confirmation_flag = True
+
+    if action != "get":
+        raise Exception("TODO")
+
+    if path != None:
+        data0 = build_path_data(type, profile, path)
+        if action != "get":
+            # put aws -p ... < data.yml
+            # のパターンが未実装
+            raise Exception("TODO")
+    else:
+        data0 = load_yaml(src_file)
+
+    data1 = do_actions(action, data0, repeat_count)
+
+    if action == "get":
+        r1 = data0 # src
+        r2 = data1 # クラウド側
+    elif action == "put":
+        r1 = data1 # 更新前のクラウド側
+        r2 = data0 # src
+
+    if output_format == "completion":
+        output_completion(get_by_path(data1, path))
+    elif output_format == "simple":
+        if is_diff:
+            output_simple_diff(get_by_path(r1, path), get_by_path(r2, path))
+        else:
+            output_simple(get_by_path(data1, path))
+    elif output_format == "y":
+        if is_diff:
+            diff_yaml(get_by_path(r1, path), get_by_path(r2, path))
+        else:
+            save_yaml(get_by_path(data1, path), None)
+    elif output_format == "yaml":
+        if is_diff:
+            diff_yaml(r1, r2)
+        elif is_inplace:
+            save_yaml(data1, src_file)
+        else:
+            save_yaml(data1, None)
 
 def check_confirm(confirm):
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -180,39 +219,66 @@ def check_confirm(confirm):
             return True
     time_str = now.isoformat()
     hm = time_str[11:13] + time_str[14:16]
-    raise Exception(f"put action needs correct parameter --confirm {hm}")
+    raise Exception(f"put action needs --confirm {hm}")
+
+def build_path_data(type, profile, path):
+    data = {}
+    data0 = {
+        "type": type,
+        "profile": profile,
+        "resources": data,
+    }
+    for elem in path:
+        data1 = {}
+        data[elem] = data1
+        data = data1
+    return data0
+
+def get_by_path(data, path):
+    def sub(data):
+        if path == None:
+            result = data
+        else:
+            result = data["resources"]
+            for elem in path:
+                result = result[elem]
+        return result
+    if isinstance(data, list):
+        result = []
+        for elem in data:
+            result.append(sub(elem))
+    else:
+        result = sub(data)
+    return result
 
 def load_yaml(src_file):
-    #loader = yaml.CLoader
     if src_file:
         with open(src_file) as f:
             data = yaml.safe_load(f)
     elif sys.stdin.isatty():
-        raise Exception(f"src file not specified")
+        raise Exception(f"-s not specified")
     else:
         data = yaml.safe_load(sys.stdin)
     return data
 
-def represent_str(dumper, s):
-    if "\n" in s:
-        return dumper.represent_scalar('tag:yaml.org,2002:str', s, style='|')
-    else:
-        return dumper.represent_scalar('tag:yaml.org,2002:str', s)
+def output_completion(result):
+    if result == None:
+        pass
+    elif isinstance(result, dict):
+        for name, value in result.items():
+            print(name)
+    elif isinstance(result, list):
+        for name in result:
+            print(name)
 
-yaml.add_representer(str, represent_str)
-
-def output_simple(data1, resource_queries, is_completion):
-    result = data1["resources"]
-    for elem in resource_queries:
-        result = result[elem]
+def output_simple(result):
     if result == None:
         pass
     elif isinstance(result, dict):
         is_simple = True
-        if not is_completion:
-            for name, value in result.items():
-                if value != {}:
-                    is_simple = False
+        for name, value in result.items():
+            if value != {}:
+                is_simple = False
         if is_simple:
             for name, value in result.items():
                 print(name)
@@ -222,14 +288,29 @@ def output_simple(data1, resource_queries, is_completion):
         for name in result:
             print(name)
     elif isinstance(result, str):
-        if not is_completion:
-            print(result)
+        print(result)
     elif isinstance(result, int):
-        if not is_completion:
-            print(result)
+        print(result)
     else:
-        if not is_completion:
-            save_yaml(result, None)
+        save_yaml(result, None)
+
+def output_simple_diff(result1, result2):
+    if result1 == {} and (isinstance(result2, str) or isinstance(result2, int)):
+        result1 = ""
+    if (result1 == "" or isinstance(result1, str)) and isinstance(result2, str):
+        sic_lib.exec_diff(result1, result2, None)
+    elif (result1 == "" or isinstance(result1, int)) and isinstance(result2, int):
+        sic_lib.exec_diff(str(result1), str(result2), None)
+    else:
+        diff_yaml(result1, result2)
+
+def represent_str(dumper, s):
+    if "\n" in s:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', s, style='|')
+    else:
+        return dumper.represent_scalar('tag:yaml.org,2002:str', s)
+
+yaml.add_representer(str, represent_str)
 
 def save_yaml(data, dst_file):
     yaml_str = yaml.dump(data, sort_keys = False, allow_unicode = True, width = 120, default_flow_style = False)
@@ -239,10 +320,23 @@ def save_yaml(data, dst_file):
     else:
         sys.stdout.write(yaml_str)
 
-def diff_yaml(src_data, dst_data, dst_file):
+def diff_yaml(src_data, dst_data):
     src_yaml_str = yaml.dump(src_data, sort_keys = False, allow_unicode = True, width = 120)
     dst_yaml_str = yaml.dump(dst_data, sort_keys = False, allow_unicode = True, width = 120)
-    sic_lib.exec_diff(src_yaml_str, dst_yaml_str, dst_file)
+    sic_lib.exec_diff(src_yaml_str, dst_yaml_str, None)
+
+def do_actions(action, data0, repeat_count):
+    data1 = data0
+    for i in range(repeat_count):
+        if isinstance(data1, list):
+            data2 = []
+            for elem in data1:
+                r = do_action(action, elem)
+                data2.append(r)
+        else:
+            data2 = do_action(action, data1)
+        data1 = data2
+    return data1
 
 def do_action(action, src_data):
     global update_message_prefix
