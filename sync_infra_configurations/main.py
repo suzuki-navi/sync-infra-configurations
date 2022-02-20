@@ -60,11 +60,11 @@ def parse_args():
             i = i + 1
         #elif a == "-i":
         #    is_inplace = True
-        #elif a == "--repeat":
-        #    if i >= argCount:
-        #        raise Exception(f"Option parameter not found: {a}")
-        #    repeat_count = int(sys.argv[i])
-        #    i = i + 1
+        elif a == "--repeat":
+            if i >= argCount:
+                raise Exception(f"Option parameter not found: {a}")
+            repeat_count = int(sys.argv[i])
+            i = i + 1
         #elif a == "--force":
         #    confirm = True
         #elif a == "--dry-run":
@@ -104,7 +104,8 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
     if action == None:
         action = "get"
         if repeat_count == None:
-            if type == None:
+            if type == None and src_file == None:
+                # 標準入力から取り込む場合はデフォルトは0
                 repeat_count = 0
             else:
                 repeat_count = 1
@@ -112,6 +113,10 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
     if action == "get":
         if type == None and src_file == None and sys.stdin.isatty():
             raise Exception(f"either aws parameter or -s must be expected")
+
+    if output_format == "y":
+        if type == None:
+            raise Exception(f"-y option needs aws parameter")
 
     if action != "get":
         raise Exception("TODO")
