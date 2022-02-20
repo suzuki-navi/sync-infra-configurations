@@ -3,6 +3,7 @@ import re
 import sys
 
 import boto3
+import botocore.exceptions
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib
@@ -63,10 +64,16 @@ def fetch_s3_object(s3_path: str, session):
         return None
     s3_bucket = m.group(1)
     s3_key = m.group(2)
-    res = s3_client.get_object(Bucket = s3_bucket, Key = s3_key)
-    body = res['Body'].read()
-    body_str = body.decode('utf-8')
-    return body_str
+    try:
+        res = s3_client.get_object(Bucket = s3_bucket, Key = s3_key)
+        body = res['Body'].read()
+        body_str = body.decode('utf-8')
+        return body_str
+    except botocore.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchKey":
+            return ""
+        else:
+            raise
 
 def put_s3_object(s3_path: str, body: str, session):
     s3_client = session.client("s3")

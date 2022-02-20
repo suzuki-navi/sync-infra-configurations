@@ -63,17 +63,6 @@ def describe_job(name, session, glue_client):
     info["ScriptSource"] = script_source
     return info
 
-def fetch_script_source(script_s3_path, session):
-    script_source = sic_aws.fetch_s3_object(script_s3_path, session)
-    lines = []
-    for line in script_source.split("\n"):
-        lines.append(line.rstrip(" \t\r"))
-    while len(lines) > 0 and lines[0] == "":
-        lines = lines[1:]
-    while len(lines) > 0 and lines[len(lines) - 1] == "":
-        lines = lines[0 : len(lines) - 1]
-    return "\n".join(lines) + "\n"
-
 def update_job(name, src_data, is_new, session, glue_client):
     if is_new:
         sic_main.add_update_message(f"glue_client.create_job(Name = {name}, ...)")
@@ -124,6 +113,19 @@ def modify_data_for_put(update_data):
     else:
         sic_lib.removeKey(update_data, "AllocatedCapacity")
     return update_data
+
+def fetch_script_source(script_s3_path, session):
+    script_source = sic_aws.fetch_s3_object(script_s3_path, session)
+    if script_source == None:
+        return ""
+    lines = []
+    for line in script_source.split("\n"):
+        lines.append(line.rstrip(" \t\r"))
+    while len(lines) > 0 and lines[0] == "":
+        lines = lines[1:]
+    while len(lines) > 0 and lines[len(lines) - 1] == "":
+        lines = lines[0 : len(lines) - 1]
+    return "\n".join(lines) + "\n"
 
 def put_script_source(script_source, script_s3_path, session):
     sic_aws.put_s3_object(script_s3_path, script_source, session)
