@@ -34,7 +34,7 @@ def list_crawlers(glue_client):
 def execute_crawler(action, is_new, name, src_data, glue_client):
     return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_crawler(name, glue_client),
-        lambda src_data, is_new, is_preview: update_crawler(name, src_data, is_new, is_preview, glue_client),
+        lambda src_data, is_new: update_crawler(name, src_data, is_new, glue_client),
         {},
     )
 
@@ -50,12 +50,10 @@ def describe_crawler(name, glue_client):
     sic_lib.removeKey(info, "Version")
     return info
 
-def update_crawler(name, src_data, is_new, is_preview, glue_client):
+def update_crawler(name, src_data, is_new, glue_client):
     if is_new:
         sic_main.add_update_message(f"glue_client.create_crawler(Name = {name}, ...)")
-        if not is_preview:
-            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                raise Exception(f"put_confirmation_flag = False")
+        if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.create_crawler(**update_data)
@@ -70,9 +68,7 @@ def update_crawler(name, src_data, is_new, is_preview, glue_client):
         if src_data == curr_data:
             return curr_data
         sic_main.add_update_message(f"glue_client.update_crawler(Name = {name}, ...)")
-        if not is_preview:
-            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                raise Exception(f"put_confirmation_flag = False")
+        if sic_main.put_confirmation_flag:
             update_data = copy.deepcopy(src_data)
             update_data["Name"] = name
             glue_client.update_crawler(**update_data)

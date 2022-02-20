@@ -8,7 +8,7 @@
     $ sync-infra-configurations [get] [--diff] [--repeat N] -s SRC_FILE
     #$ sync-infra-configurations get -i [--repeat N] -s SRC_FILE
 
-    #$ sync-infra-configurations put [--dry-run] -s SRC_FILE
+    $ sync-infra-configurations put [--dry-run] -s SRC_FILE
 
     #$ sync-infra-configurations exec --aws [--profile AWS_PROFILE] [-p QUERY]
 

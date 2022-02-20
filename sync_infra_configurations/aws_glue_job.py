@@ -48,7 +48,7 @@ def list_jobs(glue_client):
 def execute_job(action, is_new, name, src_data, session, glue_client):
     return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_job(name, session, glue_client),
-        lambda src_data, is_new, is_preview: update_job(name, src_data, is_new, is_preview, session, glue_client),
+        lambda src_data, is_new: update_job(name, src_data, is_new, session, glue_client),
         {},
     )
 
@@ -74,12 +74,10 @@ def fetch_script_source(script_s3_path, session):
         lines = lines[0 : len(lines) - 1]
     return "\n".join(lines) + "\n"
 
-def update_job(name, src_data, is_new, is_preview, session, glue_client):
+def update_job(name, src_data, is_new, session, glue_client):
     if is_new:
         sic_main.add_update_message(f"glue_client.create_job(Name = {name}, ...)")
-        if not is_preview:
-            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                raise Exception(f"put_confirmation_flag = False")
+        if sic_main.put_confirmation_flag:
             update_data = modify_data_for_put(src_data)
             update_data["Name"] = name
             del update_data["ScriptSource"]
@@ -105,15 +103,13 @@ def update_job(name, src_data, is_new, is_preview, session, glue_client):
         del curr_data2["ScriptSource"]
         if src_data2 != curr_data2:
             sic_main.add_update_message(f"glue_client.update_job(JobName = {name} ...)")
-            if not is_preview:
-                if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                    raise Exception(f"put_confirmation_flag = False")
+            if sic_main.put_confirmation_flag:
                 update_data = modify_data_for_put(src_data2)
                 glue_client.update_job(JobName = name, JobUpdate = update_data)
 
         if src_data["ScriptSource"] != curr_data["ScriptSource"]:
             script_s3_path = src_data["Command"]["ScriptLocation"]
-            put_script_source(src_data["ScriptSource"], script_s3_path, is_preview, session)
+            put_script_source(src_data["ScriptSource"], script_s3_path, session)
 
         return curr_data
 

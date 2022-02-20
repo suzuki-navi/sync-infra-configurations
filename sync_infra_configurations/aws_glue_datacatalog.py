@@ -49,7 +49,7 @@ def list_databases(glue_client):
 def execute_database(action, is_new, name, src_data, glue_client):
     return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_database(name, glue_client),
-        lambda src_data, is_new, is_preview: update_database(name, src_data, is_new, is_preview, glue_client),
+        lambda src_data, is_new: update_database(name, src_data, is_new, glue_client),
         {
             "Tables": lambda action, is_new, src_data: execute_tables(action, is_new, name, src_data, glue_client),
         },
@@ -66,9 +66,7 @@ def describe_database(name, glue_client):
 def update_database(name, src_data, is_new, is_preview, glue_client):
     if is_new:
         sic_main.add_update_message(f"glue_client.create_database(Name = {name}, ...)")
-        if not is_preview:
-            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                raise Exception(f"put_confirmation_flag = False")
+        if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.create_database(DatabaseInput = update_data)
@@ -83,9 +81,7 @@ def update_database(name, src_data, is_new, is_preview, glue_client):
         if src_data == curr_data:
             return curr_data
         sic_main.add_update_message(f"glue_client.update_database(Name = {name}, ...)")
-        if not is_preview:
-            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                raise Exception(f"put_confirmation_flag = False")
+        if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.update_database(Name = name, DatabaseInput = update_data)
@@ -119,7 +115,7 @@ def list_tables(database_name, glue_client):
 def execute_table(action, is_new, database_name, table_name, src_data, glue_client):
     return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_table(database_name, table_name, glue_client),
-        lambda src_data, is_new, is_preview: update_table(database_name, table_name, src_data, is_new, is_preview, glue_client),
+        lambda src_data, is_new: update_table(database_name, table_name, src_data, is_new, glue_client),
         {},
     )
 
@@ -137,12 +133,10 @@ def describe_table(database_name, table_name, glue_client):
     sic_lib.removeKey(info, "CatalogId")
     return info
 
-def update_table(database_name, table_name, src_data, is_new, is_preview, glue_client):
+def update_table(database_name, table_name, src_data, is_new, glue_client):
     if is_new:
         sic_main.add_update_message(f"glue_client.create_table(DatabaseName = {database_name}, Name = {table_name}, ...)")
-        if not is_preview:
-            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                raise Exception(f"put_confirmation_flag = False")
+        if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = table_name
             glue_client.create_table(DatabaseName = database_name, TableInput = update_data)
@@ -157,9 +151,7 @@ def update_table(database_name, table_name, src_data, is_new, is_preview, glue_c
         if src_data == curr_data:
             return curr_data
         sic_main.add_update_message(f"glue_client.update_table(DatabaseName = {database_name}, Name = {table_name}, ...)")
-        if not is_preview:
-            if not sic_main.put_confirmation_flag: # バグにより意図せず更新してしまうの防ぐために更新処理の直前にフラグをチェック
-                raise Exception(f"put_confirmation_flag = False")
+        if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = table_name
             glue_client.update_table(DatabaseName = database_name, TableInput = update_data)

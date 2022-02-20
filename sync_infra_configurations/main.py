@@ -65,21 +65,21 @@ def parse_args():
                 raise Exception(f"Option parameter not found: {a}")
             repeat_count = int(sys.argv[i])
             i = i + 1
-        #elif a == "--force":
-        #    confirm = True
-        #elif a == "--dry-run":
-        #    is_dryrun = True
-        #elif a == "--confirm":
-        #    if i >= argCount:
-        #        raise Exception(f"Option parameter not found: {a}")
-        #    confirm = sys.argv[i]
-        #    i = i + 1
+        elif a == "--force":
+            confirm = True
+        elif a == "--dry-run":
+            is_dryrun = True
+        elif a == "--confirm":
+            if i >= argCount:
+                raise Exception(f"Option parameter not found: {a}")
+            confirm = sys.argv[i]
+            i = i + 1
         elif a.startswith("-"):
             raise Exception(f"Unknown option: {a}")
         elif action == None and a == "get":
             action = "get"
-        #elif action == None and a == "put":
-        #    action = "put"
+        elif action == None and a == "put":
+            action = "put"
         #elif action == None and a == "exec":
         #    action = "exec"
         elif a == "aws":
@@ -92,6 +92,7 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
     if path != None and type == None:
         raise Exception("-p option needs aws parameter")
 
+    # pathが . で終わっている場合はその次に続く文字列候補を出力する
     if path != None and path.endswith("."):
         path = path[0:len(path) - 1]
         action = "get"
@@ -101,6 +102,7 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
         is_inplace = False
         repeat_count = 1
 
+    # actionの指定がない場合は get とみなす
     if action == None:
         action = "get"
         if repeat_count == None:
@@ -110,24 +112,42 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
             else:
                 repeat_count = 1
 
+    # is_diffの指定がない場合のデフォルト値設定
     if action == "get":
-        if type == None and src_file == None and sys.stdin.isatty():
-            raise Exception(f"either aws parameter or -s must be expected")
+        if is_diff == None:
+            is_diff = False
+    elif action == "put":
+        if is_dryrun:
+            if is_diff == None:
+                is_diff = True
+        else:
+            pass
 
+    # 入力がない場合はエラー
+    if type == None and src_file == None and sys.stdin.isatty():
+        raise Exception(f"either aws parameter or -s must be expected")
+
+    # put の場合は -p 形式が未実装
+    if action == "put":
+        if type != None:
+            raise Exception("TODO")
+
+    # put の場合は -y 形式が未実装
+    if action == "put":
+        if output_format == "y":
+            raise Exception("TODO")
+
+    # -y の場合は -p が必須
     if output_format == "y":
         if type == None:
             raise Exception(f"-y option needs aws parameter")
 
+    # --repeat は get でのみ有効
     if action != "get":
-        raise Exception("TODO")
-
-    #elif action == "get":
-    #    if repeat_count == None:
-    #        repeat_count = 1
+        if repeat_count != None:
+            raise Exception(f"put action must not have --repeat option")
     if repeat_count == None:
         repeat_count = 1
-    #else:
-    #    repeat_count = 1
 
     #if is_inplace and src_file == None:
     #    raise Exception("-i option needs -s option")
@@ -166,27 +186,46 @@ def exec_main(help_flag, action, output_format, is_diff, type, profile, path, sr
     if action == "put":
         if not is_dryrun:
             # putコマンドでは --confirm オプションをチェック
+            if confirm == None:
+                raise Exception("put action needs --dry-run or --confirm HHMM")
             if confirm != True:
                 check_confirm(confirm)
                 confirm = True
 
             # バグにより意図せず更新してしまうの防ぐために更新系のAPIコールの直前にこのフラグをチェックしている
             # このフラグが True でないと更新系のAPIコールをしないようにしている
+            # --dry-run のときは False
             put_confirmation_flag = True
 
-    if action != "get":
-        raise Exception("TODO")
-
     if path != None:
-        data0 = build_path_data(type, profile, path)
         if action != "get":
             # put aws -p ... < data.yml
             # のパターンが未実装
             raise Exception("TODO")
+        data0 = build_path_data(type, profile, path)
     else:
         data0 = load_yaml(src_file)
 
+    # 実装していない出力形式は事前にエラーにする
+    if action == "put" and is_dryrun:
+        if output_format == "simple":
+            raise Exception("TODO")
+        elif output_format == "y":
+            raise Exception("TODO")
+        elif output_format == "yaml":
+            pass
+    elif action == "put":
+        if output_format == "simple":
+            raise Exception("TODO")
+        elif output_format == "y":
+            raise Exception("TODO")
+        elif output_format == "yaml":
+            pass
+
     data1 = do_actions(action, data0, repeat_count)
+
+    if action == "put" and not is_dryrun:
+        add_update_completion_message()
 
     if action == "get":
         r1 = data0 # src
@@ -197,23 +236,46 @@ def exec_main(help_flag, action, output_format, is_diff, type, profile, path, sr
 
     if output_format == "completion":
         output_completion(get_by_path(data1, path))
-    elif output_format == "simple":
-        if is_diff:
-            output_simple_diff(get_by_path(r1, path), get_by_path(r2, path))
-        else:
-            output_simple(get_by_path(data1, path))
-    elif output_format == "y":
-        if is_diff:
-            diff_yaml(get_by_path(r1, path), get_by_path(r2, path))
-        else:
-            save_yaml(get_by_path(data1, path), None)
-    elif output_format == "yaml":
-        if is_diff:
-            diff_yaml(r1, r2)
-        elif is_inplace:
-            save_yaml(data1, src_file)
-        else:
-            save_yaml(data1, None)
+    elif action == "get":
+        if output_format == "simple":
+            if is_diff:
+                output_simple_diff(get_by_path(r1, path), get_by_path(r2, path))
+            else:
+                output_simple(get_by_path(data1, path))
+        elif output_format == "y":
+            if is_diff:
+                diff_yaml(get_by_path(r1, path), get_by_path(r2, path))
+            else:
+                save_yaml(get_by_path(data1, path), None)
+        elif output_format == "yaml":
+            if is_diff:
+                diff_yaml(r1, r2)
+            elif is_inplace:
+                save_yaml(data1, src_file)
+            else:
+                save_yaml(data1, None)
+    elif action == "put" and is_dryrun:
+        if output_format == "simple":
+            raise Exception("TODO")
+        elif output_format == "y":
+            raise Exception("TODO")
+        elif output_format == "yaml":
+            if is_diff:
+                diff_yaml(r1, r2)
+            else:
+                save_yaml(r1, None)
+    elif action == "put":
+        if output_format == "simple":
+            raise Exception("TODO")
+        elif output_format == "y":
+            raise Exception("TODO")
+        elif output_format == "yaml":
+            if is_diff == True:
+                diff_yaml(r1, r2)
+            elif is_diff == False:
+                save_yaml(r1, None)
+            else:
+                pass
 
 def check_confirm(confirm):
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -347,15 +409,25 @@ def do_action(action, src_data):
     global update_message_prefix
     if src_data["type"] == "aws":
         update_message_prefix = sic_aws.get_message_prefix(src_data)
-        return sic_aws.do_action(action, src_data)
+        ret = sic_aws.do_action(action, src_data)
+        update_message_prefix = None
+        return ret
     else:
         return (src_data, src_data)
 
-update_message_prefix = ""
+update_message_prefix = None
 update_message = []
 
 # 更新系APIコールの直前で呼ばれる
 def add_update_message(message):
-    message = f"{update_message_prefix}: {message}"
+    if update_message_prefix:
+        message = f"{update_message_prefix}: {message}"
+    else:
+        message = f"{message}"
     print(message, file = sys.stderr)
     update_message.append(message)
+
+def add_update_completion_message():
+    if len(update_message) > 0:
+        message = "complete put action"
+        print(message, file = sys.stderr)

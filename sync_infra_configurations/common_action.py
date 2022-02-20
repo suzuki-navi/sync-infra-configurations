@@ -23,14 +23,14 @@ def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator,
                     res_data[name] = executor_map[name](action, False, src_data[name])
                 #else:
                 #    res_data[name] = {}
-    elif action == "preview" or action == "put":
+    elif action == "put":
         if src_data == None:
             # 削除
             res_data = {}
             res_data2 = {}
             for name in executor_map:
                 res_data2[name] = executor_map[name](action, False, None)
-            res_data = copy.copy(updator(src_data, is_new, action == "preview"))
+            res_data = copy.copy(updator(src_data, is_new))
             for name in executor_map:
                 res_data[name] = res_data2[name]
         elif len(src_data) == 0:
@@ -41,7 +41,7 @@ def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator,
             for name in executor_map:
                 if name in src_data2:
                     del src_data2[name]
-            res_data = copy.copy(updator(src_data2, is_new, action == "preview"))
+            res_data = copy.copy(updator(src_data2, is_new))
             for name in executor_map:
                 if name in src_data:
                     res_data[name] = executor_map[name](action, False, src_data[name])
@@ -73,7 +73,7 @@ def execute_elem_items(action, src_data, list_fetcher, executor):
             for name in items:
                 if not name in src_data:
                     res_data.append(name)
-    elif action == "preview" or action == "put":
+    elif action == "put":
         if src_data == None:
             # 子要素をすべて削除の意味
             raise Exception("TODO")
@@ -93,7 +93,7 @@ def execute_elem_items(action, src_data, list_fetcher, executor):
 def null_describe_fetcher():
     return {}
 
-def null_updator(src_data, is_new, is_preview):
+def null_updator(src_data, is_new):
     return src_data
 
 def null_items_executor(action, src_data):
