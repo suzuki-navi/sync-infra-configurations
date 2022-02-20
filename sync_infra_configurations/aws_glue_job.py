@@ -125,7 +125,7 @@ def modify_data_for_put(update_data):
         sic_lib.removeKey(update_data, "AllocatedCapacity")
     return update_data
 
-def put_script_source(script_source, script_s3_path, is_preview, session):
-    sic_aws.put_s3_object(script_s3_path, script_source, is_preview, session)
+def put_script_source(script_source, script_s3_path, session):
+    sic_aws.put_s3_object(script_s3_path, script_source, session)
 
 ####################################################################################################
