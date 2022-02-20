@@ -63,7 +63,7 @@ def describe_database(name, glue_client):
     sic_lib.removeKey(info, "CatalogId")
     return info
 
-def update_database(name, src_data, is_new, is_preview, glue_client):
+def update_database(name, src_data, is_new, glue_client):
     if is_new:
         sic_main.add_update_message(f"glue_client.create_database(Name = {name}, ...)")
         if sic_main.put_confirmation_flag:
