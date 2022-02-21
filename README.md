@@ -6,7 +6,7 @@
     #$ sync-infra-configurations put aws [--profile AWS_PROFILE] [-p PATH] [--dry-run] < foo.txt
 
     $ sync-infra-configurations [get] [--diff] [--repeat N] -s SRC_FILE
-    #$ sync-infra-configurations get -i [--repeat N] -s SRC_FILE
+    $ sync-infra-configurations get -i [--repeat N] -s SRC_FILE
 
     $ sync-infra-configurations put [--dry-run] -s SRC_FILE
 

@@ -58,8 +58,8 @@ def parse_args():
                 raise Exception(f"Option parameter not found: {a}")
             src_file = sys.argv[i]
             i = i + 1
-        #elif a == "-i":
-        #    is_inplace = True
+        elif a == "-i":
+            is_inplace = True
         elif a == "--repeat":
             if i >= argCount:
                 raise Exception(f"Option parameter not found: {a}")
@@ -112,6 +112,15 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
             else:
                 repeat_count = 1
 
+    # --repeat は get でのみ有効
+    if action != "get":
+        if repeat_count != None:
+            raise Exception(f"put action must not have --repeat option")
+
+    # --repeat は標準入力から取り込む場合を除いてデフォルト値1
+    if repeat_count == None:
+        repeat_count = 1
+
     # is_diffの指定がない場合のデフォルト値設定
     if action == "get":
         if is_diff == None:
@@ -121,6 +130,7 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
             if is_diff == None:
                 is_diff = True
         else:
+            # put実行では差分表示もフル表示もしない
             pass
 
     # 入力がない場合はエラー
@@ -142,18 +152,15 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
         if type == None:
             raise Exception(f"-y option needs aws parameter")
 
-    # --repeat は get でのみ有効
-    if action != "get":
-        if repeat_count != None:
-            raise Exception(f"put action must not have --repeat option")
-    if repeat_count == None:
-        repeat_count = 1
-
-    #if is_inplace and src_file == None:
-    #    raise Exception("-i option needs -s option")
-
-    #if is_inplace and action != "get":
-    #    raise Exception("-i option needs get command")
+    if is_inplace:
+        if src_file == None:
+            raise Exception("-i option needs -s option")
+        if action != "get":
+            raise Exception(f"{action} must not have -i option")
+        if output_format == "y":
+            raise Exception(f"only one of -y and -i can be specified")
+        if is_diff:
+            raise Exception(f"only one of --diff and -i can be specified")
 
     #if type != None and src_file != None:
     #    raise Exception(f"only one of {type} and -s can be specified")

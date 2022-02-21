@@ -72,8 +72,8 @@ def update_job(name, src_data, is_new, session, glue_client):
             del update_data["ScriptSource"]
             glue_client.create_job(**update_data)
 
-            script_s3_path = src_data["Command"]["ScriptLocation"]
-            put_script_source(src_data["ScriptSource"], script_s3_path, session)
+        script_s3_path = src_data["Command"]["ScriptLocation"]
+        put_script_source(src_data["ScriptSource"], script_s3_path, session)
 
         return None
 
