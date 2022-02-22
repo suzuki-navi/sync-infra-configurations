@@ -24,24 +24,31 @@ def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator,
                 #else:
                 #    res_data[name] = {}
     elif action == "put":
+        curr_data = describe_fetcher()
         if src_data == None:
+            if curr_data == None:
+                raise Exception()
             # 削除
             res_data = {}
             res_data2 = {}
             for name in executor_map:
                 res_data2[name] = executor_map[name](action, False, None)
-            res_data = copy.copy(updator(src_data, is_new))
+            updator(src_data, curr_data)
+            res_data = copy.copy(curr_data)
             for name in executor_map:
                 res_data[name] = res_data2[name]
         elif len(src_data) == 0:
             pass
         else:
             # 作成または更新
-            src_data2 = copy.deepcopy(src_data)
+            if curr_data == src_data:
+                return curr_data
+            src_data2 = copy.copy(src_data)
             for name in executor_map:
                 if name in src_data2:
                     del src_data2[name]
-            res_data = copy.copy(updator(src_data2, is_new))
+            updator(src_data2, curr_data)
+            res_data = copy.copy(curr_data)
             for name in executor_map:
                 if name in src_data:
                     res_data[name] = executor_map[name](action, False, src_data[name])

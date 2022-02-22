@@ -48,7 +48,7 @@ def list_jobs(glue_client):
 def execute_job(action, is_new, name, src_data, session, glue_client):
     return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_job(name, session, glue_client),
-        lambda src_data, is_new: update_job(name, src_data, is_new, session, glue_client),
+        lambda src_data, curr_data: update_job(name, src_data, curr_data, session, glue_client),
         {},
     )
 
@@ -63,8 +63,9 @@ def describe_job(name, session, glue_client):
     info["ScriptSource"] = script_source
     return info
 
-def update_job(name, src_data, is_new, session, glue_client):
-    if is_new:
+def update_job(name, src_data, curr_data, session, glue_client):
+    if curr_data == None:
+        # 新規作成
         sic_main.add_update_message(f"glue_client.create_job(Name = {name}, ...)")
         if sic_main.put_confirmation_flag:
             update_data = modify_data_for_put(src_data)
@@ -75,17 +76,12 @@ def update_job(name, src_data, is_new, session, glue_client):
         script_s3_path = src_data["Command"]["ScriptLocation"]
         put_script_source(src_data["ScriptSource"], script_s3_path, session)
 
-        return None
-
     elif src_data == None:
         # 削除
         raise Exception("TODO")
 
     else:
-        curr_data = describe_job(name, session, glue_client)
-        if src_data == curr_data:
-            return curr_data
-
+        # 更新
         src_data2 = copy.copy(src_data)
         curr_data2 = copy.copy(curr_data)
         del src_data2["ScriptSource"]
@@ -99,8 +95,6 @@ def update_job(name, src_data, is_new, session, glue_client):
         if src_data["ScriptSource"] != curr_data["ScriptSource"]:
             script_s3_path = src_data["Command"]["ScriptLocation"]
             put_script_source(src_data["ScriptSource"], script_s3_path, session)
-
-        return curr_data
 
 def modify_data_for_put(update_data):
     update_data = copy.copy(update_data)

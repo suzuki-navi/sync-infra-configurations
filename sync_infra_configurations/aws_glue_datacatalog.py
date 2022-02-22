@@ -63,29 +63,26 @@ def describe_database(name, glue_client):
     sic_lib.removeKey(info, "CatalogId")
     return info
 
-def update_database(name, src_data, is_new, glue_client):
-    if is_new:
+def update_database(name, src_data, curr_data, glue_client):
+    if curr_data == None:
+        # 新規作成
         sic_main.add_update_message(f"glue_client.create_database(Name = {name}, ...)")
         if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.create_database(DatabaseInput = update_data)
-        return None
 
     elif src_data == None:
         # 削除
         raise Exception("TODO")
 
     else:
-        curr_data = describe_database(name, glue_client)
-        if src_data == curr_data:
-            return curr_data
+        # 更新
         sic_main.add_update_message(f"glue_client.update_database(Name = {name}, ...)")
         if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = name
             glue_client.update_database(Name = name, DatabaseInput = update_data)
-        return curr_data
 
 ####################################################################################################
 # DataCatalog -> Databases -> <database_name> -> Tables
@@ -115,7 +112,7 @@ def list_tables(database_name, glue_client):
 def execute_table(action, is_new, database_name, table_name, src_data, glue_client):
     return common_action.execute_elem_properties(action, is_new, src_data,
         lambda: describe_table(database_name, table_name, glue_client),
-        lambda src_data, is_new: update_table(database_name, table_name, src_data, is_new, glue_client),
+        lambda src_data, curr_data: update_table(database_name, table_name, src_data, curr_data, glue_client),
         {},
     )
 
@@ -133,28 +130,25 @@ def describe_table(database_name, table_name, glue_client):
     sic_lib.removeKey(info, "CatalogId")
     return info
 
-def update_table(database_name, table_name, src_data, is_new, glue_client):
-    if is_new:
+def update_table(database_name, table_name, src_data, curr_data, glue_client):
+    if curr_data == None:
+        # 新規作成
         sic_main.add_update_message(f"glue_client.create_table(DatabaseName = {database_name}, Name = {table_name}, ...)")
         if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = table_name
             glue_client.create_table(DatabaseName = database_name, TableInput = update_data)
-        return None
 
     elif src_data == None:
         # 削除
         raise Exception("TODO")
 
     else:
-        curr_data = describe_table(database_name, table_name, glue_client)
-        if src_data == curr_data:
-            return curr_data
+        # 更新
         sic_main.add_update_message(f"glue_client.update_table(DatabaseName = {database_name}, Name = {table_name}, ...)")
         if sic_main.put_confirmation_flag:
             update_data = copy.copy(src_data)
             update_data["Name"] = table_name
             glue_client.update_table(DatabaseName = database_name, TableInput = update_data)
-        return curr_data
 
 ####################################################################################################

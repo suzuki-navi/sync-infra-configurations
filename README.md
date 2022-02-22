@@ -23,7 +23,7 @@ putコマンドでは SRC_FILE に書かれているリソースをクラウド�
 getコマンドに--diffオプションを付けると、出力形式がdiff形式になる。put --dry-runコマンドでは標準でdiff形式と。
 get --diff はput --dry-runコマンドの反対の出力になる。
 
-#getコマンドに-iオプションを付けると、出力先が入力元と同じSRC_FILEになる。
+getコマンドに-iオプションを付けると、出力先が入力元と同じSRC_FILEになる。
 
 
 ## Installation
@@ -36,5 +36,5 @@ get --diff はput --dry-runコマンドの反対の出力になる。
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+This project is licensed under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
