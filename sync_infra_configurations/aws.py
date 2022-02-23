@@ -6,7 +6,6 @@ import boto3
 import botocore.exceptions
 
 import sync_infra_configurations.main as sic_main
-import sync_infra_configurations.lib as sic_lib
 import sync_infra_configurations.common_action as common_action
 import sync_infra_configurations.aws_s3 as sic_aws_s3
 import sync_infra_configurations.aws_glue_datacatalog as sic_aws_glue_datacatalog

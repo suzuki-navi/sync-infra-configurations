@@ -52,7 +52,29 @@ def execute_job(action, name, src_data, session, glue_client):
         {
             "ScriptSource": lambda action, src_data: execute_scriptsource(action, name, src_data, session, glue_client),
         },
+        help_job,
     )
+
+def help_job():
+    return {
+        "Description": "a description of the job",
+        "Role": "the name or ARN of the IAM role associated with this job",
+        "ExecutionProperty": "the maximum number of concurrent runs allowed for this job",
+        "Command": "the JobCommand that runs this job",
+        "DefaultArguments": "the default arguments for this job, specified as name-value pairs",
+        "NonOverridableArguments": "non-overridable arguments for this job, specified as name-value pairs",
+        "Connections": "the connections used for this job",
+        "MaxRetries": "the maximum number of times to retry this job after a JobRun fails",
+        "Timeout": "he job timeout in minutes",
+        "AllocatedCapacity": "this field is deprecated. Use MaxCapacity instead",
+        "MaxCapacity": "For Glue version 1.0 or earlier jobs, using the standard worker type, the number of Glue data processing units (DPUs) that can be allocated when this job runs.",
+        "WorkerType": "The type of predefined worker that is allocated when a job runs. Accepts a value of Standard, G.1X, or G.2X.",
+        "NumberOfWorkers": "he number of workers of a defined workerType that are allocated when a job runs",
+        "SecurityConfiguration": "the name of the SecurityConfiguration structure to be used with this job",
+        "NotificationProperty": "specifies configuration properties of a job notification",
+        "GlueVersion": "Glue version determines the versions of Apache Spark and Python that Glue supports.",
+        "ScriptSource": "Script in S3",
+    }
 
 def describe_job(name, session, glue_client):
     res = glue_client.get_job(JobName = name)

@@ -1,16 +1,36 @@
 import copy
 
+import sync_infra_configurations.main as sic_main
+
 # execute_elem_properties: リソースそのものを処理
 # execute_elem_items: リソース一覧を処理
 
-def execute_elem_properties(action, src_data, describe_fetcher, updator, executor_map):
-    if action == "get":
-        if src_data == None or len(src_data) == 0:
-            res_data = copy.copy(describe_fetcher())
-            for name in executor_map:
-                res_data[name] = {}
+def execute_elem_properties(action, src_data, describe_fetcher, updator, executor_map, help_message_generator = None):
+    dst_data = describe_fetcher()
+    if isinstance(dst_data, dict):
+        dst_data2 = {}
+        if help_message_generator == None:
+            help_message = {}
         else:
-            dst_data = describe_fetcher()
+            help_message = help_message_generator()
+        for name, msg in help_message.items():
+            if name in dst_data:
+                dst_data2[name] = dst_data[name]
+        for name, value in dst_data.items():
+            if not name in dst_data2:
+                dst_data2[name] = value
+        dst_data = dst_data2
+    if action == "get":
+        if src_data == None or isinstance(src_data, dict) and len(src_data) == 0:
+            if isinstance(dst_data, dict):
+                res_data = copy.copy(dst_data)
+                for name in executor_map:
+                    res_data[name] = {}
+                for name, msg in help_message.items():
+                    sic_main.put_help_message(name, msg)
+            elif isinstance(dst_data, str):
+                res_data = dst_data
+        else:
             if isinstance(dst_data, dict):
                 res_data = {}
                 for name in src_data.keys():
@@ -27,17 +47,16 @@ def execute_elem_properties(action, src_data, describe_fetcher, updator, executo
             elif isinstance(dst_data, str):
                 res_data = dst_data
     elif action == "put":
-        curr_data = describe_fetcher()
         if src_data == None:
-            if curr_data == None:
+            if dst_data == None:
                 res_data = None
             # 削除
             res_data = {}
             res_data2 = {}
             for name in executor_map:
                 res_data2[name] = executor_map[name](action, None)
-            updator(src_data, curr_data)
-            res_data = copy.copy(curr_data)
+            updator(src_data, dst_data)
+            res_data = copy.copy(dst_data)
             for name in executor_map:
                 res_data[name] = res_data2[name]
         elif isinstance(src_data, dict) and len(src_data) == 0:
@@ -48,9 +67,9 @@ def execute_elem_properties(action, src_data, describe_fetcher, updator, executo
             for name in executor_map:
                 if name in src_data2:
                     del src_data2[name]
-            if curr_data != src_data2:
-                updator(src_data2, curr_data)
-            res_data = copy.copy(curr_data)
+            if dst_data != src_data2:
+                updator(src_data2, dst_data)
+            res_data = copy.copy(dst_data)
             for name in executor_map:
                 if name in src_data:
                     res_data[name] = executor_map[name](action, src_data[name])
@@ -100,7 +119,7 @@ def execute_elem_items(action, src_data, list_fetcher, executor):
 def null_describe_fetcher():
     return {}
 
-def null_updator(src_data, is_new):
+def null_updator(src_data, curr_data):
     return src_data
 
 def null_items_executor(action, src_data):

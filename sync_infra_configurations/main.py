@@ -329,6 +329,8 @@ def get_by_path(data, path):
         else:
             result = data["resources"]
             for elem in path:
+                if not elem in result:
+                    return None
                 result = result[elem]
         return result
     if isinstance(data, list):
@@ -353,8 +355,25 @@ def output_completion(result):
     if result == None:
         pass
     elif isinstance(result, dict):
+        max_len = 0
+        names = []
         for name, value in result.items():
-            print(name)
+            if len(name) > max_len:
+                max_len = len(name)
+            names.append(name)
+        for name, msg in help_message.items():
+            if name in names:
+                continue
+            if len(name) > max_len:
+                max_len = len(name)
+            names.append(name)
+        for name in names:
+            if name in help_message:
+                msg = help_message[name]
+            else:
+                msg = ""
+            padding = " " * (max_len - len(name))
+            print(f"{name}{padding} : {msg}")
     elif isinstance(result, list):
         for name in result:
             print(name)
@@ -457,3 +476,8 @@ def add_update_completion_message():
         message = "complete put action"
         #print(message, file = sys.stderr)
         print(message)
+
+help_message = {}
+
+def put_help_message(key, message):
+    help_message[key] = message
