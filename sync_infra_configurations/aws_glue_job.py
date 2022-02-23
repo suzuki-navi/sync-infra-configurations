@@ -1,5 +1,4 @@
 import copy
-import sys
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib
@@ -91,7 +90,6 @@ def update_job(name, src_data, curr_data, session, glue_client):
         if sic_main.put_confirmation_flag:
             update_data = modify_data_for_put(src_data)
             update_data["Name"] = name
-            del update_data["ScriptSource"]
             glue_client.create_job(**update_data)
 
     elif src_data == None:

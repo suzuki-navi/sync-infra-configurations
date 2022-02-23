@@ -1,7 +1,4 @@
 import copy
-import sys
-
-import boto3
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib
@@ -49,7 +46,7 @@ def list_databases(glue_client):
 def execute_database(action, name, src_data, glue_client):
     return common_action.execute_elem_properties(action, src_data,
         lambda: describe_database(name, glue_client),
-        lambda src_data: update_database(name, src_data, glue_client),
+        lambda src_data, curr_data: update_database(name, src_data, curr_data, glue_client),
         {
             "Tables": lambda action, src_data: execute_tables(action, name, src_data, glue_client),
         },

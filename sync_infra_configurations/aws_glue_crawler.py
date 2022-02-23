@@ -1,5 +1,4 @@
 import copy
-import sys
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.lib as sic_lib

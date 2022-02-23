@@ -6,7 +6,10 @@ import sync_infra_configurations.main as sic_main
 # execute_elem_items: リソース一覧を処理
 
 def execute_elem_properties(action, src_data, describe_fetcher, updator, executor_map, help_message_generator = None):
-    dst_data = describe_fetcher()
+    if action == "put-new":
+        dst_data = None
+    else:
+        dst_data = describe_fetcher()
     if isinstance(dst_data, dict):
         dst_data2 = {}
         if help_message_generator == None:
@@ -46,7 +49,7 @@ def execute_elem_properties(action, src_data, describe_fetcher, updator, executo
                     #    res_data[name] = {}
             elif isinstance(dst_data, str):
                 res_data = dst_data
-    elif action == "put":
+    elif action == "put" or action == "put-new":
         if src_data == None:
             if dst_data == None:
                 res_data = None
@@ -54,7 +57,7 @@ def execute_elem_properties(action, src_data, describe_fetcher, updator, executo
             res_data = {}
             res_data2 = {}
             for name in executor_map:
-                res_data2[name] = executor_map[name](action, None)
+                res_data2[name] = executor_map[name]("put", None)
             updator(src_data, dst_data)
             res_data = copy.copy(dst_data)
             for name in executor_map:
@@ -72,7 +75,7 @@ def execute_elem_properties(action, src_data, describe_fetcher, updator, executo
             res_data = copy.copy(dst_data)
             for name in executor_map:
                 if name in src_data:
-                    res_data[name] = executor_map[name](action, src_data[name])
+                    res_data[name] = executor_map[name]("put", src_data[name])
     return res_data
 
 def execute_elem_items(action, src_data, list_fetcher, executor):
@@ -109,11 +112,15 @@ def execute_elem_items(action, src_data, list_fetcher, executor):
             res_data = {}
             # 作成または更新または削除
             for name in src_data:
-                res_data[name] = executor(action, name, src_data[name])
+                if name in items:
+                    res_data[name] = executor(action, name, src_data[name])
+                else:
+                    res_data[name] = executor("put-new", name, src_data[name])
         elif isinstance(src_data, list):
             res_data = []
             for name in src_data:
-                res_data[name] = executor(action, name, src_data[name])
+                if name in items:
+                    res_data.append(name)
     return res_data
 
 def null_describe_fetcher():

@@ -7,10 +7,11 @@ import botocore.exceptions
 
 import sync_infra_configurations.main as sic_main
 import sync_infra_configurations.common_action as common_action
-import sync_infra_configurations.aws_s3 as sic_aws_s3
-import sync_infra_configurations.aws_glue_datacatalog as sic_aws_glue_datacatalog
-import sync_infra_configurations.aws_glue_crawler as sic_aws_glue_crawler
-import sync_infra_configurations.aws_glue_job as sic_aws_glue_job
+import sync_infra_configurations.aws_s3               as sic_aws_s3
+import sync_infra_configurations.aws_glue_datacatalog as aws_glue_datacatalog
+import sync_infra_configurations.aws_glue_crawler     as aws_glue_crawler
+import sync_infra_configurations.aws_glue_job         as aws_glue_job
+import sync_infra_configurations.aws_stepfunctions    as aws_stepfunctions
 
 def get_message_prefix(data):
     if "profile" in data:
@@ -48,12 +49,17 @@ def execute_elem_resources(action, src_data, session):
         common_action.null_describe_fetcher,
         common_action.null_updator,
         {
-            "S3Buckets":    lambda action, src_data: sic_aws_s3.execute_buckets(action, src_data, session),
-            "DataCatalog":  lambda action, src_data: sic_aws_glue_datacatalog.execute_datacatalog(action, src_data, session),
-            "GlueCrawlers": lambda action, src_data: sic_aws_glue_crawler.execute_crawlers(action, src_data, session),
-            "GlueJob":      lambda action, src_data: sic_aws_glue_job.execute_gluejob(action, src_data, session),
+            "S3Buckets":     lambda action, src_data: aws_s3.execute_buckets(action, src_data, session),
+            "DataCatalog":   lambda action, src_data: aws_glue_datacatalog.execute_datacatalog(action, src_data, session),
+            "GlueCrawlers":  lambda action, src_data: aws_glue_crawler.execute_crawlers(action, src_data, session),
+            "GlueJob":       lambda action, src_data: aws_glue_job.execute_gluejob(action, src_data, session),
+            "StepFunctions": lambda action, src_data: aws_stepfunctions.execute_stepfunctions(action, src_data, session),
         },
     )
+
+def fetch_account_id(session):
+    account_id = session.client("sts").get_caller_identity()["Account"]
+    return account_id
 
 def fetch_s3_object(s3_path: str, session):
     s3_client = session.client("s3")
