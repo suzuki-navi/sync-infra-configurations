@@ -10,13 +10,13 @@ import sync_infra_configurations.aws as sic_aws
 # GlueJob
 ####################################################################################################
 
-def execute_gluejob(action, is_new, src_data, session):
+def execute_gluejob(action, src_data, session):
     glue_client = session.client("glue")
-    return common_action.execute_elem_properties(action, is_new, src_data,
+    return common_action.execute_elem_properties(action, src_data,
         common_action.null_describe_fetcher,
         common_action.null_updator,
         {
-            "Jobs": lambda action, is_new, src_data: execute_jobs(action, is_new, src_data, session, glue_client),
+            "Jobs": lambda action, src_data: execute_jobs(action, src_data, session, glue_client),
         },
     )
 
@@ -24,10 +24,10 @@ def execute_gluejob(action, is_new, src_data, session):
 # GlueJob -> Jobs
 ####################################################################################################
 
-def execute_jobs(action, is_new, src_data, session, glue_client):
+def execute_jobs(action, src_data, session, glue_client):
     return common_action.execute_elem_items(action, src_data,
         lambda: list_jobs(glue_client),
-        lambda action, is_new, name, src_data: execute_job(action, is_new, name, src_data, session, glue_client))
+        lambda action, name, src_data: execute_job(action, name, src_data, session, glue_client))
 
 def list_jobs(glue_client):
     result = []
@@ -45,8 +45,8 @@ def list_jobs(glue_client):
 # DataCatalog -> Databases -> <database_name>
 ####################################################################################################
 
-def execute_job(action, is_new, name, src_data, session, glue_client):
-    return common_action.execute_elem_properties(action, is_new, src_data,
+def execute_job(action, name, src_data, session, glue_client):
+    return common_action.execute_elem_properties(action, src_data,
         lambda: describe_job(name, session, glue_client),
         lambda src_data, curr_data: update_job(name, src_data, curr_data, session, glue_client),
         {},

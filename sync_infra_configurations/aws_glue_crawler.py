@@ -13,7 +13,7 @@ def execute_crawlers(action, is_new, src_data, session):
     glue_client = session.client("glue")
     return common_action.execute_elem_items(action, src_data,
         lambda: list_crawlers(glue_client),
-        lambda action, is_new, name, src_data: execute_crawler(action, is_new, name, src_data, glue_client))
+        lambda action, name, src_data: execute_crawler(action, name, src_data, glue_client))
 
 def list_crawlers(glue_client):
     result = []
@@ -31,8 +31,8 @@ def list_crawlers(glue_client):
 # GlueCrawlers -> <crawler_name>
 ####################################################################################################
 
-def execute_crawler(action, is_new, name, src_data, glue_client):
-    return common_action.execute_elem_properties(action, is_new, src_data,
+def execute_crawler(action, name, src_data, glue_client):
+    return common_action.execute_elem_properties(action, src_data,
         lambda: describe_crawler(name, glue_client),
         lambda src_data, curr_data: update_crawler(name, src_data, curr_data, glue_client),
         {},

@@ -3,7 +3,7 @@ import copy
 # execute_elem_properties: リソースそのものを処理
 # execute_elem_items: リソース一覧を処理
 
-def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator, executor_map):
+def execute_elem_properties(action, src_data, describe_fetcher, updator, executor_map):
     if action == "get":
         if src_data == None or len(src_data) == 0:
             res_data = copy.copy(describe_fetcher())
@@ -20,7 +20,7 @@ def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator,
                     res_data[name] = dst_data[name]
             for name in executor_map:
                 if name in src_data:
-                    res_data[name] = executor_map[name](action, False, src_data[name])
+                    res_data[name] = executor_map[name](action, src_data[name])
                 #else:
                 #    res_data[name] = {}
     elif action == "put":
@@ -32,7 +32,7 @@ def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator,
             res_data = {}
             res_data2 = {}
             for name in executor_map:
-                res_data2[name] = executor_map[name](action, False, None)
+                res_data2[name] = executor_map[name](action, None)
             updator(src_data, curr_data)
             res_data = copy.copy(curr_data)
             for name in executor_map:
@@ -51,7 +51,7 @@ def execute_elem_properties(action, is_new, src_data, describe_fetcher, updator,
             res_data = copy.copy(curr_data)
             for name in executor_map:
                 if name in src_data:
-                    res_data[name] = executor_map[name](action, False, src_data[name])
+                    res_data[name] = executor_map[name](action, src_data[name])
     return res_data
 
 def execute_elem_items(action, src_data, list_fetcher, executor):
@@ -71,7 +71,7 @@ def execute_elem_items(action, src_data, list_fetcher, executor):
             res_data = {}
             for name in src_data:
                 if name in items:
-                    res_data[name] = executor(action, False, name, src_data[name])
+                    res_data[name] = executor(action, name, src_data[name])
         elif isinstance(src_data, list):
             res_data = []
             for name in src_data:
@@ -88,13 +88,11 @@ def execute_elem_items(action, src_data, list_fetcher, executor):
             res_data = {}
             # 作成または更新または削除
             for name in src_data:
-                is_new = not (name in items)
-                res_data[name] = executor(action, is_new, name, src_data[name])
+                res_data[name] = executor(action, name, src_data[name])
         elif isinstance(src_data, list):
             res_data = []
             for name in src_data:
-                is_new = not (name in items)
-                res_data[name] = executor(action, is_new, name, src_data[name])
+                res_data[name] = executor(action, name, src_data[name])
     return res_data
 
 def null_describe_fetcher():

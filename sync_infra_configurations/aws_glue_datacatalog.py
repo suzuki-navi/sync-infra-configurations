@@ -11,13 +11,13 @@ import sync_infra_configurations.common_action as common_action
 # DataCatalog
 ####################################################################################################
 
-def execute_datacatalog(action, is_new, src_data, session):
+def execute_datacatalog(action, src_data, session):
     glue_client = session.client("glue")
-    return common_action.execute_elem_properties(action, is_new, src_data,
+    return common_action.execute_elem_properties(action, src_data,
         common_action.null_describe_fetcher,
         common_action.null_updator,
         {
-            "Databases": lambda action, is_new, src_data: execute_databases(action, is_new, src_data, glue_client),
+            "Databases": lambda action, src_data: execute_databases(action, src_data, glue_client),
         },
     )
 
@@ -25,10 +25,10 @@ def execute_datacatalog(action, is_new, src_data, session):
 # DataCatalog -> Databases
 ####################################################################################################
 
-def execute_databases(action, is_new, src_data, glue_client):
+def execute_databases(action, src_data, glue_client):
     return common_action.execute_elem_items(action, src_data,
         lambda: list_databases(glue_client),
-        lambda action, is_new, name, src_data: execute_database(action, is_new, name, src_data, glue_client))
+        lambda action, name, src_data: execute_database(action, name, src_data, glue_client))
 
 def list_databases(glue_client):
     result = []
@@ -46,12 +46,12 @@ def list_databases(glue_client):
 # DataCatalog -> Databases -> <database_name>
 ####################################################################################################
 
-def execute_database(action, is_new, name, src_data, glue_client):
-    return common_action.execute_elem_properties(action, is_new, src_data,
+def execute_database(action, name, src_data, glue_client):
+    return common_action.execute_elem_properties(action, src_data,
         lambda: describe_database(name, glue_client),
-        lambda src_data, is_new: update_database(name, src_data, is_new, glue_client),
+        lambda src_data: update_database(name, src_data, glue_client),
         {
-            "Tables": lambda action, is_new, src_data: execute_tables(action, is_new, name, src_data, glue_client),
+            "Tables": lambda action, src_data: execute_tables(action, name, src_data, glue_client),
         },
     )
 
@@ -88,10 +88,10 @@ def update_database(name, src_data, curr_data, glue_client):
 # DataCatalog -> Databases -> <database_name> -> Tables
 ####################################################################################################
 
-def execute_tables(action, is_new, database_name, src_data, glue_client):
+def execute_tables(action, database_name, src_data, glue_client):
     return common_action.execute_elem_items(action, src_data,
         lambda: list_tables(database_name, glue_client),
-        lambda action, is_new, name, src_data: execute_table(action, is_new, database_name, name, src_data, glue_client))
+        lambda action, name, src_data: execute_table(action,  database_name, name, src_data, glue_client))
 
 def list_tables(database_name, glue_client):
     result = []
@@ -109,8 +109,8 @@ def list_tables(database_name, glue_client):
 # DataCatalog -> Databases -> <database_name> -> Tables -> <table_name>
 ####################################################################################################
 
-def execute_table(action, is_new, database_name, table_name, src_data, glue_client):
-    return common_action.execute_elem_properties(action, is_new, src_data,
+def execute_table(action, database_name, table_name, src_data, glue_client):
+    return common_action.execute_elem_properties(action, src_data,
         lambda: describe_table(database_name, table_name, glue_client),
         lambda src_data, curr_data: update_table(database_name, table_name, src_data, curr_data, glue_client),
         {},
