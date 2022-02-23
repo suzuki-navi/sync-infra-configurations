@@ -84,6 +84,10 @@ def parse_args():
         #    action = "exec"
         elif a == "aws":
             type = "aws"
+        elif type == "aws" and path == None and src_file == None:
+            path = a
+        elif type == None and path == None and src_file == None:
+            src_file = a
         else:
             raise Exception(f"Unknown parameter: {a}")
     return (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
@@ -426,6 +430,7 @@ update_message_prefix = None
 update_message = []
 
 # 更新系APIコールの直前で呼ばれる
+# --dry-run でも呼ばれる
 def add_update_message(message):
     if update_message_prefix:
         message = f"{update_message_prefix}: {message}"
@@ -435,6 +440,8 @@ def add_update_message(message):
     print(message)
     update_message.append(message)
 
+# 更新系の処理がすべて完了したら呼ばれる
+# --dry-run では呼ばれない
 def add_update_completion_message():
     if len(update_message) > 0:
         message = "complete put action"
