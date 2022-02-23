@@ -11,8 +11,8 @@ import sync_infra_configurations.common_action as common_action
 def execute_crawlers(action, is_new, src_data, session):
     glue_client = session.client("glue")
     return common_action.execute_elem_items(action, src_data,
-        lambda: list_crawlers(glue_client),
-        lambda action, name, src_data: execute_crawler(action, name, src_data, glue_client))
+        list_fetcher = lambda: list_crawlers(glue_client),
+        item_executor = lambda action, name, src_data: execute_crawler(action, name, src_data, glue_client))
 
 def list_crawlers(glue_client):
     result = []
@@ -32,9 +32,8 @@ def list_crawlers(glue_client):
 
 def execute_crawler(action, name, src_data, glue_client):
     return common_action.execute_elem_properties(action, src_data,
-        lambda: describe_crawler(name, glue_client),
-        lambda src_data, curr_data: update_crawler(name, src_data, curr_data, glue_client),
-        {},
+        describe_fetcher = lambda: describe_crawler(name, glue_client),
+        updator = lambda src_data, curr_data: update_crawler(name, src_data, curr_data, glue_client),
     )
 
 def describe_crawler(name, glue_client):

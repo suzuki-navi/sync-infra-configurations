@@ -11,9 +11,7 @@ import sync_infra_configurations.common_action as common_action
 def execute_datacatalog(action, src_data, session):
     glue_client = session.client("glue")
     return common_action.execute_elem_properties(action, src_data,
-        common_action.null_describe_fetcher,
-        common_action.null_updator,
-        {
+        executor_map = {
             "Databases": lambda action, src_data: execute_databases(action, src_data, glue_client),
         },
     )
@@ -24,8 +22,8 @@ def execute_datacatalog(action, src_data, session):
 
 def execute_databases(action, src_data, glue_client):
     return common_action.execute_elem_items(action, src_data,
-        lambda: list_databases(glue_client),
-        lambda action, name, src_data: execute_database(action, name, src_data, glue_client))
+        list_fetcher = lambda: list_databases(glue_client),
+        item_executor = lambda action, name, src_data: execute_database(action, name, src_data, glue_client))
 
 def list_databases(glue_client):
     result = []
@@ -45,9 +43,9 @@ def list_databases(glue_client):
 
 def execute_database(action, name, src_data, glue_client):
     return common_action.execute_elem_properties(action, src_data,
-        lambda: describe_database(name, glue_client),
-        lambda src_data, curr_data: update_database(name, src_data, curr_data, glue_client),
-        {
+        describer = lambda: describe_database(name, glue_client),
+        updator = lambda src_data, curr_data: update_database(name, src_data, curr_data, glue_client),
+        executor_map = {
             "Tables": lambda action, src_data: execute_tables(action, name, src_data, glue_client),
         },
     )
@@ -87,8 +85,8 @@ def update_database(name, src_data, curr_data, glue_client):
 
 def execute_tables(action, database_name, src_data, glue_client):
     return common_action.execute_elem_items(action, src_data,
-        lambda: list_tables(database_name, glue_client),
-        lambda action, name, src_data: execute_table(action,  database_name, name, src_data, glue_client))
+        list_fetcher = lambda: list_tables(database_name, glue_client),
+        item_executor = lambda action, name, src_data: execute_table(action,  database_name, name, src_data, glue_client))
 
 def list_tables(database_name, glue_client):
     result = []
@@ -108,9 +106,8 @@ def list_tables(database_name, glue_client):
 
 def execute_table(action, database_name, table_name, src_data, glue_client):
     return common_action.execute_elem_properties(action, src_data,
-        lambda: describe_table(database_name, table_name, glue_client),
-        lambda src_data, curr_data: update_table(database_name, table_name, src_data, curr_data, glue_client),
-        {},
+        describer = lambda: describe_table(database_name, table_name, glue_client),
+        updator = lambda src_data, curr_data: update_table(database_name, table_name, src_data, curr_data, glue_client),
     )
 
 def describe_table(database_name, table_name, glue_client):

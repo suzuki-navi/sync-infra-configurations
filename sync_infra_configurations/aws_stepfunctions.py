@@ -13,9 +13,7 @@ import sync_infra_configurations.aws as sic_aws
 def execute_stepfunctions(action, src_data, session):
     stepfunctions_client = session.client("stepfunctions")
     return common_action.execute_elem_properties(action, src_data,
-        common_action.null_describe_fetcher,
-        common_action.null_updator,
-        {
+        executor_map = {
             "StateMachines": lambda action, src_data: execute_statemachines(action, src_data, session, stepfunctions_client),
         },
     )
@@ -26,8 +24,8 @@ def execute_stepfunctions(action, src_data, session):
 
 def execute_statemachines(action, src_data, session, stepfunctions_client):
     return common_action.execute_elem_items(action, src_data,
-        lambda: list_statemachines(session, stepfunctions_client),
-        lambda action, name, src_data: execute_statemachine(action, name, src_data, session, stepfunctions_client),
+        list_fetcher = lambda: list_statemachines(session, stepfunctions_client),
+        item_executor = lambda action, name, src_data: execute_statemachine(action, name, src_data, session, stepfunctions_client),
     )
 
 def list_statemachines(session, stepfunctions_client):
@@ -51,10 +49,9 @@ def list_statemachines(session, stepfunctions_client):
 
 def execute_statemachine(action, name, src_data, session, stepfunctions_client):
     return common_action.execute_elem_properties(action, src_data,
-        lambda: describe_statemachine(name, session, stepfunctions_client),
-        lambda src_data, curr_data: update_statemachine(name, src_data, curr_data, session, stepfunctions_client),
-        {},
-        help_statemachine,
+        describer = lambda: describe_statemachine(name, session, stepfunctions_client),
+        updator = lambda src_data, curr_data: update_statemachine(name, src_data, curr_data, session, stepfunctions_client),
+        help_generator = help_statemachine,
     )
 
 def help_statemachine():

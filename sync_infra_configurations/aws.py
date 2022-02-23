@@ -46,9 +46,7 @@ def create_aws_session(data):
 
 def execute_elem_resources(action, src_data, session):
     return common_action.execute_elem_properties(action, src_data,
-        common_action.null_describe_fetcher,
-        common_action.null_updator,
-        {
+        executor_map = {
             "S3Buckets":     lambda action, src_data: aws_s3.execute_buckets(action, src_data, session),
             "DataCatalog":   lambda action, src_data: aws_glue_datacatalog.execute_datacatalog(action, src_data, session),
             "GlueCrawlers":  lambda action, src_data: aws_glue_crawler.execute_crawlers(action, src_data, session),

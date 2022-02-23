@@ -12,9 +12,7 @@ import sync_infra_configurations.aws as sic_aws
 def execute_gluejob(action, src_data, session):
     glue_client = session.client("glue")
     return common_action.execute_elem_properties(action, src_data,
-        common_action.null_describe_fetcher,
-        common_action.null_updator,
-        {
+        executor_map = {
             "Jobs": lambda action, src_data: execute_jobs(action, src_data, session, glue_client),
         },
     )
@@ -25,8 +23,8 @@ def execute_gluejob(action, src_data, session):
 
 def execute_jobs(action, src_data, session, glue_client):
     return common_action.execute_elem_items(action, src_data,
-        lambda: list_jobs(glue_client),
-        lambda action, name, src_data: execute_job(action, name, src_data, session, glue_client))
+        list_fetcher = lambda: list_jobs(glue_client),
+        item_executor = lambda action, name, src_data: execute_job(action, name, src_data, session, glue_client))
 
 def list_jobs(glue_client):
     result = []
@@ -46,12 +44,12 @@ def list_jobs(glue_client):
 
 def execute_job(action, name, src_data, session, glue_client):
     return common_action.execute_elem_properties(action, src_data,
-        lambda: describe_job(name, session, glue_client),
-        lambda src_data, curr_data: update_job(name, src_data, curr_data, session, glue_client),
-        {
+        describer = lambda: describe_job(name, session, glue_client),
+        updator = lambda src_data, curr_data: update_job(name, src_data, curr_data, session, glue_client),
+        executor_map = {
             "ScriptSource": lambda action, src_data: execute_scriptsource(action, name, src_data, session, glue_client),
         },
-        help_job,
+        help_generator = help_job,
     )
 
 def help_job():
@@ -121,9 +119,8 @@ def modify_data_for_put(update_data):
 
 def execute_scriptsource(action, name, src_data, session, glue_client):
     return common_action.execute_elem_properties(action, src_data,
-        lambda: describe_scriptsource(name, session, glue_client),
-        lambda src_data, curr_data: update_scriptsource(name, src_data, curr_data, session, glue_client),
-        {},
+        describer = lambda: describe_scriptsource(name, session, glue_client),
+        updator = lambda src_data, curr_data: update_scriptsource(name, src_data, curr_data, session, glue_client),
     )
 
 def describe_scriptsource(name, session, glue_client):

@@ -6,7 +6,8 @@ import sync_infra_configurations.common_action as common_action
 
 def execute_buckets(action, src_data, session):
     s3_client = session.client("s3")
-    return common_action.execute_elem_items(action, src_data, lambda: list_buckets(s3_client), common_action.null_item_executor)
+    return common_action.execute_elem_items(action, src_data,
+        list_fetcher = lambda: list_buckets(s3_client))
 
 def list_buckets(s3_client):
     result = []
