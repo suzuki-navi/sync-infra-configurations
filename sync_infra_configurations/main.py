@@ -6,14 +6,20 @@ import yaml
 import sync_infra_configurations.aws as sic_aws
 import sync_infra_configurations.lib as sic_lib
 
-put_confirmation_flag = False
-
 def main():
     (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm) = parse_args()
     (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm) = check_args \
         (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
     exec_main \
         (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
+
+# putアクションで --dry-run が指定されていなく、変更処理を実行することを示すフラグ
+# バグにより意図せず更新処理してしまうのが怖いので、引き回しせずにグローバルで持つことにする
+put_confirmation_flag = False
+
+####################################################################################################
+# パラメータ解釈
+####################################################################################################
 
 def parse_args():
     help_flag = False
@@ -91,6 +97,10 @@ def parse_args():
         else:
             raise Exception(f"Unknown parameter: {a}")
     return (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
+
+####################################################################################################
+# パラメータの組み合わせチェック
+####################################################################################################
 
 def check_args(help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm):
     if path != None and type == None:
@@ -191,6 +201,10 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
 
     return (help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm)
 
+####################################################################################################
+# 実行
+####################################################################################################
+
 def exec_main(help_flag, action, output_format, is_diff, type, profile, path, src_file, is_dryrun, is_inplace, repeat_count, confirm):
     global put_confirmation_flag
 
@@ -288,6 +302,9 @@ def exec_main(help_flag, action, output_format, is_diff, type, profile, path, sr
             else:
                 pass
 
+####################################################################################################
+
+# --confirm の時間チェック
 def check_confirm(confirm):
     now = datetime.datetime.now(datetime.timezone.utc)
     for i in range(3):
@@ -299,6 +316,7 @@ def check_confirm(confirm):
     hm = time_str[11:13] + time_str[14:16]
     raise Exception(f"put action needs --confirm {hm}")
 
+# -p オプションからデータ作成
 def build_path_data(type, profile, path):
     data = {}
     data0 = {
@@ -312,6 +330,7 @@ def build_path_data(type, profile, path):
         data = data1
     return data0
 
+# データから -p で指定された場所を抜き出す
 def get_by_path(data, path):
     def sub(data):
         if path == None:
