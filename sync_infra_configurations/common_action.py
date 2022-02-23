@@ -11,23 +11,26 @@ def execute_elem_properties(action, src_data, describe_fetcher, updator, executo
                 res_data[name] = {}
         else:
             dst_data = describe_fetcher()
-            res_data = {}
-            for name in src_data.keys():
-                if name in dst_data:
-                    res_data[name] = dst_data[name]
-            for name in dst_data.keys():
-                if not name in src_data:
-                    res_data[name] = dst_data[name]
-            for name in executor_map:
-                if name in src_data:
-                    res_data[name] = executor_map[name](action, src_data[name])
-                #else:
-                #    res_data[name] = {}
+            if isinstance(dst_data, dict):
+                res_data = {}
+                for name in src_data.keys():
+                    if name in dst_data:
+                        res_data[name] = dst_data[name]
+                for name in dst_data.keys():
+                    if not name in src_data:
+                        res_data[name] = dst_data[name]
+                for name in executor_map:
+                    if name in src_data:
+                        res_data[name] = executor_map[name](action, src_data[name])
+                    #else:
+                    #    res_data[name] = {}
+            elif isinstance(dst_data, str):
+                res_data = dst_data
     elif action == "put":
         curr_data = describe_fetcher()
         if src_data == None:
             if curr_data == None:
-                raise Exception()
+                res_data = None
             # 削除
             res_data = {}
             res_data2 = {}
@@ -37,17 +40,16 @@ def execute_elem_properties(action, src_data, describe_fetcher, updator, executo
             res_data = copy.copy(curr_data)
             for name in executor_map:
                 res_data[name] = res_data2[name]
-        elif len(src_data) == 0:
+        elif isinstance(src_data, dict) and len(src_data) == 0:
             pass
         else:
             # 作成または更新
-            if curr_data == src_data:
-                return curr_data
             src_data2 = copy.copy(src_data)
             for name in executor_map:
                 if name in src_data2:
                     del src_data2[name]
-            updator(src_data2, curr_data)
+            if curr_data != src_data2:
+                updator(src_data2, curr_data)
             res_data = copy.copy(curr_data)
             for name in executor_map:
                 if name in src_data:

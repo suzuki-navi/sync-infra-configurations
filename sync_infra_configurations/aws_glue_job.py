@@ -49,7 +49,9 @@ def execute_job(action, name, src_data, session, glue_client):
     return common_action.execute_elem_properties(action, src_data,
         lambda: describe_job(name, session, glue_client),
         lambda src_data, curr_data: update_job(name, src_data, curr_data, session, glue_client),
-        {},
+        {
+            "ScriptSource": lambda action, src_data: execute_scriptsource(action, name, src_data, session, glue_client),
+        },
     )
 
 def describe_job(name, session, glue_client):
@@ -58,9 +60,6 @@ def describe_job(name, session, glue_client):
     sic_lib.removeKey(info, "Name")
     sic_lib.removeKey(info, "CreatedOn")
     sic_lib.removeKey(info, "LastModifiedOn")
-    script_s3_path = info["Command"]["ScriptLocation"]
-    script_source = fetch_script_source(script_s3_path, session)
-    info["ScriptSource"] = script_source
     return info
 
 def update_job(name, src_data, curr_data, session, glue_client):
@@ -73,28 +72,16 @@ def update_job(name, src_data, curr_data, session, glue_client):
             del update_data["ScriptSource"]
             glue_client.create_job(**update_data)
 
-        script_s3_path = src_data["Command"]["ScriptLocation"]
-        put_script_source(src_data["ScriptSource"], script_s3_path, session)
-
     elif src_data == None:
         # 削除
         raise Exception("TODO")
 
     else:
         # 更新
-        src_data2 = copy.copy(src_data)
-        curr_data2 = copy.copy(curr_data)
-        del src_data2["ScriptSource"]
-        del curr_data2["ScriptSource"]
-        if src_data2 != curr_data2:
-            sic_main.add_update_message(f"glue_client.update_job(JobName = {name} ...)")
-            if sic_main.put_confirmation_flag:
-                update_data = modify_data_for_put(src_data2)
-                glue_client.update_job(JobName = name, JobUpdate = update_data)
-
-        if src_data["ScriptSource"] != curr_data["ScriptSource"]:
-            script_s3_path = src_data["Command"]["ScriptLocation"]
-            put_script_source(src_data["ScriptSource"], script_s3_path, session)
+        sic_main.add_update_message(f"glue_client.update_job(JobName = {name} ...)")
+        if sic_main.put_confirmation_flag:
+            update_data = modify_data_for_put(src_data)
+            glue_client.update_job(JobName = name, JobUpdate = update_data)
 
 def modify_data_for_put(update_data):
     update_data = copy.copy(update_data)
@@ -107,6 +94,40 @@ def modify_data_for_put(update_data):
     else:
         sic_lib.removeKey(update_data, "AllocatedCapacity")
     return update_data
+
+####################################################################################################
+# DataCatalog -> Databases -> <database_name> -> ScriptSource
+####################################################################################################
+
+def execute_scriptsource(action, name, src_data, session, glue_client):
+    return common_action.execute_elem_properties(action, src_data,
+        lambda: describe_scriptsource(name, session, glue_client),
+        lambda src_data, curr_data: update_scriptsource(name, src_data, curr_data, session, glue_client),
+        {},
+    )
+
+def describe_scriptsource(name, session, glue_client):
+    info = describe_job(name, session, glue_client)
+    script_s3_path = info["Command"]["ScriptLocation"]
+    script_source = fetch_script_source(script_s3_path, session)
+    info["ScriptSource"] = script_source
+    return script_source
+
+def update_scriptsource(name, src_data, curr_data, session, glue_client):
+    info = describe_job(name, session, glue_client)
+    script_s3_path = info["Command"]["ScriptLocation"]
+
+    if curr_data == None:
+        # 新規作成
+        put_script_source(src_data, script_s3_path, session)
+
+    elif src_data == None:
+        # 削除
+        raise Exception("TODO")
+
+    else:
+        # 更新
+        put_script_source(src_data, script_s3_path, session)
 
 def fetch_script_source(script_s3_path, session):
     script_source = sic_aws.fetch_s3_object(script_s3_path, session)

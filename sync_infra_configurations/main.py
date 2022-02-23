@@ -140,6 +140,9 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
         if is_diff == None:
             is_diff = False
     elif action == "put":
+        if is_diff and not is_dryrun and not confirm:
+            # --diff が指定されていて --dry-run も --confirm もない場合は --dry-run とみなす
+            is_dryrun = True
         if is_dryrun:
             if is_diff == None:
                 is_diff = True
@@ -175,18 +178,6 @@ def check_args(help_flag, action, output_format, is_diff, type, profile, path, s
             raise Exception(f"only one of -y and -i can be specified")
         if is_diff:
             raise Exception(f"only one of --diff and -i can be specified")
-
-    #if type != None and src_file != None:
-    #    raise Exception(f"only one of {type} and -s can be specified")
-
-    #if action == "get":
-    #    pass
-    #elif action == "put":
-    #    if type != None:
-    #        if output_format == "yaml":
-    #            raise Exception(f"only one of {type} and --yaml when put action")
-    #elif action == "exec":
-    #    raise Exception(f"TODO")
 
     if type != None:
         if path == None or path == "":
